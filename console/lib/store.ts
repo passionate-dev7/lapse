@@ -83,7 +83,11 @@ function split(rows: Record<string, unknown>[]): { cases: Case[]; runs: Run[] } 
         item: c.item ?? {},
         job: c.job ?? null,
         timeline: c.timeline ?? [],
+        // Spread first, then default. Listing the fields instead silently drops every field the
+        // engine adds later: `question_shape` and `choices` were both lost that way, which took
+        // the answer control off all 39 open questions while the records themselves carried it.
         verdict: {
+          ...c.verdict,
           outcome: c.verdict?.outcome ?? "DECIDE",
           klass: c.verdict?.klass ?? null,
           due_on: c.verdict?.due_on ?? null,
