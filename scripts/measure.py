@@ -49,7 +49,8 @@ def main() -> int:
         )
     )
 
-    soon_end = today + timedelta(days=7)
+    # Seven days means seven, today plus six, not today plus seven.
+    soon_end = today + timedelta(days=6)
     where = f"expiration_date in ({day_list(today, soon_end)}) AND permit_status='ISSUED'"
     n_soon = count(permit_feed.DOB_PERMITS, where)
     measured.append(
@@ -152,6 +153,14 @@ def main() -> int:
     for violation in open_violations:
         types[violation.type_code] = types.get(violation.type_code, 0) + 1
     print(f"            by type: {json.dumps(dict(sorted(types.items())))}")
+    print(
+        "\n            This violation count is deliberately wider than the one a pass reports.\n"
+        "            It is every open violation at every building the contractor has a permit\n"
+        "            in, over five years. A pass narrows it twice before deciding anything:\n"
+        "            to two years, and to the buildings where a live permit still sits\n"
+        "            (agent/engine/portfolio.py, VIOLATION_SINCE_DAYS and live_bins). The wide\n"
+        "            number is the raw exposure. The narrow one is what is actually theirs."
+    )
 
     measured += [
         {

@@ -18,9 +18,20 @@ from pathlib import Path
 
 import pytest
 
-from agent.dispatch import SIMULATOR_SUCCESS, _body, _subject, resolve_delivery, send_response
+from agent.dispatch import (
+    SIMULATOR_SUCCESS,
+    DeliveryLoop,
+    _assert_not_a_loop,
+    _body,
+    _desks,
+    _subject,
+    resolve_delivery,
+    send_response,
+)
 
-DESK = "lapse@getava.xyz"
+SENDER = "lapse@getava.xyz"
+DESK = "filing-desk@getava.xyz"
+OPERATOR = "lapse-operator@getava.xyz"
 
 
 def _case() -> dict:
@@ -55,42 +66,112 @@ def _case() -> dict:
     }
 
 
+def test_the_filing_desk_is_read_from_the_contractor_record():
+    """Dispatch never keeps its own idea of who it works for."""
+    filing, operator = _desks()
+    assert "@" in filing and "@" in operator
+    assert filing != operator, (
+        "the filing desk and the fallback must be different addresses, or the "
+        "held_for_verification mode cannot mean anything"
+    )
+    assert filing != SENDER, "the response must not be addressed to the sender"
+
+
 def test_a_verified_desk_is_a_direct_delivery():
-    to, mode, reason = resolve_delivery(filing_desk=DESK, production=False, desk_verified=True)
+    to, mode, reason = resolve_delivery(
+        filing_desk=DESK, operator_desk=OPERATOR, production=False,
+        desk_verified=True, operator_verified=True,
+    )
     assert to == DESK and mode == "direct"
     assert "verified identity" in reason
 
 
 def test_production_access_delivers_directly_to_anything():
     to, mode, reason = resolve_delivery(
-        filing_desk="office@somecontractor.example", production=True, desk_verified=False
+        filing_desk="office@somecontractor.example", operator_desk=OPERATOR,
+        production=True, desk_verified=False, operator_verified=True,
     )
     assert to == "office@somecontractor.example" and mode == "direct"
     assert "left the sandbox" in reason
 
 
-def test_an_unverified_desk_in_the_sandbox_is_proven_against_the_simulator():
+def test_an_unreachable_desk_falls_back_to_the_operator_and_says_so():
+    """The text is unaltered and `intended` still names the real target."""
+    to, mode, reason = resolve_delivery(
+        filing_desk="office@somecontractor.example", operator_desk=OPERATOR,
+        production=False, desk_verified=False, operator_verified=True,
+    )
+    assert to == OPERATOR and mode == "held_for_verification"
+    assert "office@somecontractor.example" in reason
+    assert "has not received it" in reason
+
+
+def test_neither_reachable_is_proven_against_the_simulator():
     """Not a failure, and not a lie either. It says nothing arrived."""
     to, mode, reason = resolve_delivery(
-        filing_desk="office@somecontractor.example", production=False, desk_verified=False
+        filing_desk="office@somecontractor.example", operator_desk=OPERATOR,
+        production=False, desk_verified=False, operator_verified=False,
     )
     assert to == SIMULATOR_SUCCESS and mode == "simulated"
-    assert "Nothing reached the filing desk" in reason
+    assert "Nothing reached anybody" in reason
+
+
+def test_a_response_addressed_to_ourselves_is_refused():
+    """The failure that looks exactly like success.
+
+    A real send to our own sending identity returns a real MessageId and writes
+    a delivery record that tells a reader the response reached somebody. It
+    reached the program that wrote it. That is worse than an error, because an
+    error is visible.
+    """
+    with pytest.raises(DeliveryLoop) as raised:
+        _assert_not_a_loop(sender=SENDER, recipient=SENDER, intended=SENDER)
+    assert "is not a delivery" in str(raised.value)
+
+    with pytest.raises(DeliveryLoop):
+        _assert_not_a_loop(sender=SENDER, recipient=SENDER, intended=DESK)
+
+    # The simulator is the one legitimate case, because it is labelled as
+    # having reached nobody rather than passed off as a delivery.
+    _assert_not_a_loop(sender=SENDER, recipient=SIMULATOR_SUCCESS, intended=DESK)
+    _assert_not_a_loop(sender=SENDER, recipient=DESK, intended=DESK)
 
 
 def test_a_simulated_body_says_so_in_the_message_itself():
     """The honesty has to survive the message being forwarded out of context."""
     body = _body(_case(), mode="simulated", recipient=SIMULATOR_SUCCESS, filing_desk=DESK)
     assert "mailbox simulator" in body
-    assert "Nothing has reached the filing desk yet." in body
+    assert "Nothing has reached anybody yet." in body
+
+
+def test_a_held_body_names_who_it_was_actually_for():
+    body = _body(_case(), mode="held_for_verification", recipient=OPERATOR, filing_desk=DESK)
+    assert DESK in body
+    assert OPERATOR in body
+    assert "The filing desk has not received it." in body
 
 
 def test_a_direct_body_does_not_apologise_for_a_send_that_worked():
     body = _body(_case(), mode="direct", recipient=DESK, filing_desk=DESK)
     assert "simulator" not in body
-    assert "Lapse cannot file this." in body, (
-        "every message must say the agent cannot file with DOB, in every mode"
-    )
+    assert "has not received it" not in body
+
+
+def test_every_body_says_this_is_not_addressed_to_the_city():
+    """The claim that would lose the category if it were ever implied.
+
+    DOB NOW takes a filing from a licensed person signed in under their own
+    login. An agent cannot file, and a message that lets a reader think it did
+    is the overreach worth guarding in a test rather than in a docstring.
+    """
+    for mode, recipient in (
+        ("direct", DESK),
+        ("held_for_verification", OPERATOR),
+        ("simulated", SIMULATOR_SUCCESS),
+    ):
+        body = _body(_case(), mode=mode, recipient=recipient, filing_desk=DESK)
+        assert "Lapse cannot file this and this is not addressed to the city." in body
+        assert "the filing itself is yours" in body
 
 
 def test_the_body_carries_the_evidence_and_the_links_to_check_it():

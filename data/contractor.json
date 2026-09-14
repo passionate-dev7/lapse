@@ -1,0 +1,14 @@
+{
+  "contractor": "VARSITY PLBG AND HTG INC",
+  "note": "The permits, filings and violations Lapse reads for this business are public records and are fetched live from NYC Open Data. The filing desk below is not. It is the address Lapse delivers a drafted response to, and it belongs to whoever is running Lapse, not to the business whose public filings are being watched. Nothing in this repository sends mail to a real contractor who did not ask for it.",
+  "filing_desk": {
+    "email": "filing-desk@getava.xyz",
+    "role": "the person who logs in to DOB NOW and files",
+    "who": "Lapse operator desk, standing in for the contractor's own filing representative until a real one is onboarded"
+  },
+  "operator_desk": {
+    "email": "lapse-operator@getava.xyz",
+    "role": "where a response goes when the filing desk is not reachable, so a draft is never silently dropped"
+  },
+  "why_not_the_city": "DOB NOW accepts a filing from a licensed person signed in under their own login, and for most job types from a registered filing representative. There is no API, no email address and no delegated path that would let an agent file on somebody's behalf, and there should not be. So the end of this pipeline is the desk of the person who can file, holding the drafted text, the deadline, the evidence the engine checked and the rule it came from."
+}

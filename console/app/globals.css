@@ -121,6 +121,7 @@
   .statement {
     font-size: clamp(30px, 2.2vw + 18px, 42px);
     line-height: 1.1;
+    text-wrap: balance;
     font-weight: 400;
     letter-spacing: -0.012em;
     font-variation-settings: "opsz" 36;
@@ -129,6 +130,7 @@
   .record-title {
     font-size: clamp(21px, 0.8vw + 17px, 25px);
     line-height: 1.22;
+    text-wrap: balance;
     font-weight: 400;
     letter-spacing: -0.008em;
     font-variation-settings: "opsz" 28;

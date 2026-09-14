@@ -436,9 +436,7 @@ def build_agent(
             "verdict": verdict_record(verdict),
             "draft_text": None,
             "question": None,
-            "timeline": [
-                {"at": _now(), "event": "opened", "detail": f"verdict {verdict.outcome.value}"}
-            ],
+            "timeline": [],
             "delivery": None,
             "created_at": _now(),
             "updated_at": _now(),
@@ -449,8 +447,14 @@ def build_agent(
         # would let a later pass send the same renewal request again.
         previous = sink.read(contractor, cid)
         if previous:
+            # A case somebody already opened is not opened again. A pass aimed
+            # at one approved case re-derives the same verdict and the same
+            # draft, and writing those down a second time turns the ledger into
+            # a log of the program's control flow rather than a history of the
+            # item. A person reading a case months later wants to know what
+            # happened to the permit, not how many times a pass looked at it.
             case["created_at"] = previous.get("created_at", case["created_at"])
-            case["timeline"] = list(previous.get("timeline", [])) + case["timeline"]
+            case["timeline"] = list(previous.get("timeline", []))
             for carried in ("delivery", "draft_text", "question"):
                 if previous.get(carried):
                     case[carried] = previous[carried]
@@ -460,6 +464,10 @@ def build_agent(
                 log("already_filed", f"{cid} went out on an earlier pass; not sending again")
             if previous.get("draft_text"):
                 ledger.drafts[cid] = previous["draft_text"]
+        else:
+            case["timeline"] = [
+                {"at": _now(), "event": "opened", "detail": f"verdict {verdict.outcome.value}"}
+            ]
 
         ledger.cases[cid] = case
         where = sink.write(case)
@@ -486,11 +494,17 @@ def build_agent(
             )
         if len(draft_text.split()) > 260:
             return "Rejected: too long. Eight sentences at most."
+        already = case.get("draft_text")
         ledger.drafts[case_id_arg] = draft_text
         case["draft_text"] = draft_text
-        case["timeline"].append(
-            {"at": _now(), "event": "drafted", "detail": f"{len(draft_text.split())} words"}
-        )
+        if already != draft_text:
+            case["timeline"].append(
+                {
+                    "at": _now(),
+                    "event": "redrafted" if already else "drafted",
+                    "detail": f"{len(draft_text.split())} words",
+                }
+            )
         case["updated_at"] = _now()
         sink.write(case)
         log("drafted", f"{case_id_arg} cites {routing}")
