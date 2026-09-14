@@ -5,6 +5,7 @@ import {
   filingFunction,
   getCase,
   handOffForFiling,
+  handOffForResolve,
   recordAnswer,
   recordApproval,
 } from "@/lib/store";
@@ -58,8 +59,19 @@ export async function POST(
         { status: 409 },
       );
     }
+    const evidenceId = target.verdict?.evidence_id?.trim() ?? "";
+    if (!evidenceId) {
+      return NextResponse.json(
+        {
+          error:
+            "This case carries no evidence id, so an answer could not be tied to the verdict it answers and nothing was written.",
+        },
+        { status: 422 },
+      );
+    }
+
     try {
-      await recordAnswer(caseId, body.answer, decisionText(target));
+      await recordAnswer(caseId, body.answer, evidenceId, decisionText(target));
     } catch (error) {
       const err = error as { name?: string; message?: string };
       if (err.name === "ConditionalCheckFailedException") {
@@ -73,9 +85,30 @@ export async function POST(
       }
       return NextResponse.json({ error: err.message ?? "The write failed." }, { status: 502 });
     }
+
+    const resolveId = target.item?.item_id?.trim();
+    if (!filingFunction() || !resolveId) {
+      return NextResponse.json({
+        ok: true,
+        resolving: false,
+        message: `Answered ${body.answer}, and that is on the case. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
+      });
+    }
+
+    try {
+      await handOffForResolve(resolveId);
+    } catch (error) {
+      return NextResponse.json({
+        ok: true,
+        resolving: false,
+        message: `Answered ${body.answer}, and that is on the case. A pass could not be started now (${(error as Error).message}), so the next scheduled one picks it up.`,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
-      message: `Answered ${body.answer}. That is on the case now and the next screening pass reads it. Nothing has been sent and this permit is not yet handled.`,
+      resolving: true,
+      message: `Answered ${body.answer}. A pass is re-reading this permit with your answer on it and will write the draft. Nothing has been sent, and the draft still needs your approval.`,
     });
   }
 

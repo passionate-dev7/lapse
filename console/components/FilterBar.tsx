@@ -1,12 +1,14 @@
 import Link from "next/link";
 
-import { klassTone, type ItemKind, type Klass } from "@/lib/cases";
+import { klassTone, type Case, type ItemKind, type Klass } from "@/lib/cases";
 import { plural, titleCase } from "@/lib/format";
 import { SearchBox, SortSelect } from "@/components/FilterControls";
 import {
+  boroughOf,
   isFiltered,
   KINDS,
-  KLASSES,
+  KLASS_FILTERS,
+  NO_KLASS,
   STATES,
   STATE_WORD,
   toggle,
@@ -22,16 +24,18 @@ import {
  */
 export function FilterBar({
   filter,
+  pending,
   shown,
-  total,
   sites,
 }: {
   filter: Filter;
+  pending: Case[];
   shown: number;
-  total: number;
   sites: string[];
 }) {
+  const total = pending.length;
   const on = isFiltered(filter);
+  const n = counts(pending);
 
   return (
     <section className="mt-14 border-t border-rule pt-6">
@@ -42,44 +46,54 @@ export function FilterBar({
 
       <div className="mt-5 flex flex-col gap-3">
         <Row label="Deadline">
-          {KLASSES.map((k) => (
-            <Chip
-              key={k}
-              href={toQuery(withPatch(filter, { klass: toggle(filter.klass, k) }))}
-              on={filter.klass.includes(k)}
-              tone={klassTone(k)}
-            >
-              {k}
-            </Chip>
-          ))}
+          {KLASS_FILTERS.map((k) =>
+            n.klass[k] ? (
+              <Chip
+                key={k}
+                href={toQuery(withPatch(filter, { klass: toggle(filter.klass, k) }))}
+                on={filter.klass.includes(k)}
+                tone={k === NO_KLASS ? "var(--rule-strong)" : klassTone(k as Klass)}
+                count={n.klass[k]}
+              >
+                {k === NO_KLASS ? "no class" : k}
+              </Chip>
+            ) : null,
+          )}
         </Row>
         <Row label="State">
-          {STATES.map((s) => (
-            <Chip
-              key={s}
-              href={toQuery(withPatch(filter, { state: toggle(filter.state, s) }))}
-              on={filter.state.includes(s)}
-            >
-              {STATE_WORD[s]}
-            </Chip>
-          ))}
-          {KINDS.map((k: ItemKind) => (
-            <Chip
-              key={k}
-              href={toQuery(withPatch(filter, { kind: toggle(filter.kind, k) }))}
-              on={filter.kind.includes(k)}
-            >
-              {k === "permit" ? "permits" : "violations"}
-            </Chip>
-          ))}
+          {STATES.map((s) =>
+            n.state[s] ? (
+              <Chip
+                key={s}
+                href={toQuery(withPatch(filter, { state: toggle(filter.state, s) }))}
+                on={filter.state.includes(s)}
+                count={n.state[s]}
+              >
+                {STATE_WORD[s]}
+              </Chip>
+            ) : null,
+          )}
+          {KINDS.map((k: ItemKind) =>
+            n.kind[k] ? (
+              <Chip
+                key={k}
+                href={toQuery(withPatch(filter, { kind: toggle(filter.kind, k) }))}
+                on={filter.kind.includes(k)}
+                count={n.kind[k]}
+              >
+                {k === "permit" ? "permits" : "violations"}
+              </Chip>
+            ) : null,
+          )}
         </Row>
         {sites.length ? (
-          <Row label="Site">
+          <Row label="Borough">
             {sites.map((s) => (
               <Chip
                 key={s}
                 href={toQuery(withPatch(filter, { site: filter.site === s ? "" : s }))}
                 on={filter.site === s}
+                count={n.site[s]}
               >
                 {titleCase(s)}
               </Chip>
@@ -100,12 +114,37 @@ export function FilterBar({
   );
 }
 
-const CLEARED = { klass: [], state: [], kind: [], site: "", q: "" } as const;
+const CLEARED: Partial<Filter> = { klass: [], state: [], kind: [], site: "", q: "" };
+
+/**
+ * Nothing matched. It says what was asked for and how many rows it was asked of, because a page
+ * that only says "nothing here" is indistinguishable from a page whose read failed, and on a
+ * deadline product those two mean opposite things.
+ */
+export function NoMatches({ filter, total }: { filter: Filter; total: number }) {
+  return (
+    <section className="mt-12 border-t border-rule pt-10">
+      <h2 className="record-title max-w-[42ch]">
+        {`No open decision matches that, out of the ${plural(total, "on the queue", "on the queue")}.`}
+      </h2>
+      <p className="prose-16 mt-4 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>
+        {`This is a filter finding nothing, not a clear portfolio. ${sentence(filter, 0, total)}`}
+      </p>
+      <p className="mt-6">
+        <Link className="btn btn-secondary" href={toQuery({ ...filter, ...CLEARED })}>
+          Show all {total}
+        </Link>
+      </p>
+    </section>
+  );
+}
 
 function sentence(filter: Filter, shown: number, total: number): string {
   if (!isFiltered(filter)) return `All ${plural(total, "open decision")}, ${orderWord(filter)}.`;
   const parts: string[] = [];
-  if (filter.klass.length) parts.push(filter.klass.join(" or "));
+  if (filter.klass.length) {
+    parts.push(filter.klass.map((k) => (k === NO_KLASS ? "carrying no class" : k)).join(" or "));
+  }
   if (filter.state.length) parts.push(filter.state.map((s) => STATE_WORD[s]).join(" or "));
   if (filter.kind.length) parts.push(filter.kind.join(" or "));
   if (filter.site) parts.push(`at ${titleCase(filter.site)}`);
@@ -132,11 +171,13 @@ function Chip({
   href,
   on,
   tone,
+  count,
   children,
 }: {
   href: string;
   on: boolean;
   tone?: string;
+  count?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -149,6 +190,32 @@ function Chip({
         />
       ) : null}
       {children}
+      {count === undefined ? null : (
+        <span style={{ opacity: 0.62, fontVariantNumeric: "tabular-nums" }}>{count}</span>
+      )}
     </Link>
   );
+}
+
+/**
+ * How many open decisions each facet would hold on its own. Counted over the whole queue rather
+ * than over the current slice, so a chip never reads zero because of a filter it is not part of,
+ * and a facet nothing falls into is left off the row rather than offered as a dead control.
+ */
+function counts(pending: Case[]) {
+  const klass: Record<string, number> = {};
+  const state: Record<string, number> = {};
+  const kind: Record<string, number> = {};
+  const site: Record<string, number> = {};
+  for (const c of pending) {
+    const k = c.verdict?.klass ?? NO_KLASS;
+    klass[k] = (klass[k] ?? 0) + 1;
+    if (c.status === "awaiting_approval") state.draft = (state.draft ?? 0) + 1;
+    if (c.status === "needs_decision") state.decide = (state.decide ?? 0) + 1;
+    const kd = c.item?.kind ?? c.kind;
+    if (kd) kind[kd] = (kind[kd] ?? 0) + 1;
+    const b = boroughOf(c.item?.address);
+    if (b) site[b] = (site[b] ?? 0) + 1;
+  }
+  return { klass, state, kind, site };
 }

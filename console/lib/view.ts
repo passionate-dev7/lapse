@@ -35,8 +35,17 @@ export const STATE_WORD: Record<State, string> = {
 export const KLASSES: Klass[] = ["lapsed", "critical", "due", "clear"];
 export const KINDS: ItemKind[] = ["permit", "violation"];
 
+/**
+ * A row the engine could not date carries no class at all, and nine of them are open right now.
+ * "none" is a real slice of the queue rather than an absence to be hidden, so it is a value the
+ * URL can carry like any other.
+ */
+export const NO_KLASS = "none";
+export type KlassFilter = Klass | typeof NO_KLASS;
+export const KLASS_FILTERS: KlassFilter[] = [...KLASSES, NO_KLASS];
+
 export interface Filter {
-  klass: Klass[];
+  klass: KlassFilter[];
   state: State[];
   kind: ItemKind[];
   site: string;
@@ -71,7 +80,7 @@ function one(raw: string | string[] | undefined): string {
 export function parseFilter(params: RawParams): Filter {
   const sortRaw = one(params.sort).toLowerCase() as Sort;
   return {
-    klass: list(params.klass, KLASSES),
+    klass: list(params.klass, KLASS_FILTERS),
     state: list(params.state, STATES),
     kind: list(params.kind, KINDS),
     site: one(params.site),
@@ -158,7 +167,10 @@ export function applyFilter(cases: Case[], f: Filter): Case[] {
   const needle = f.q.toLowerCase();
   const site = f.site.toLowerCase();
   const filtered = cases.filter((c) => {
-    if (f.klass.length && !f.klass.includes(c.verdict?.klass as Klass)) return false;
+    if (f.klass.length) {
+      const klass = c.verdict?.klass;
+      if (!f.klass.includes((klass ?? NO_KLASS) as KlassFilter)) return false;
+    }
     const state = stateOf(c);
     if (f.state.length && (!state || !f.state.includes(state))) return false;
     if (f.kind.length && !f.kind.includes((c.item?.kind ?? c.kind) as ItemKind)) return false;
