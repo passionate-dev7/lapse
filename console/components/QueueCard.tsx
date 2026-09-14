@@ -1,67 +1,69 @@
+import { AnswerAction } from "@/components/AnswerAction";
 import { ApproveAction } from "@/components/ApproveAction";
 import { ChecksTable } from "@/components/ChecksTable";
-import { headline, itemLabel, klassTone, type Case } from "@/lib/cases";
 import {
-  daysPhrase,
-  hostOf,
-  longDate,
-  splitStatement,
-  squash,
-  tailOf,
-  titleCase,
-} from "@/lib/format";
+  ANSWER_YES,
+  decisionText,
+  headline,
+  itemLabel,
+  klassTone,
+  recordedAnswer,
+  type Case,
+} from "@/lib/cases";
+import { daysPhrase, hostOf, longDate, squash, tailOf } from "@/lib/format";
 
 /**
- * One decision. The rail on the right is the deadline and nothing else, so the page has a spine
- * a person can run their eye down without reading a word. The reading column answers, in order:
- * what to do, which item, what the work is, what the engine checked, what it wrote, and where
- * the date came from.
+ * One decision, ordered by what a person needs in the order they need it: how long they have,
+ * where it is, what it is, what the engine checked, what it wrote, and then the one thing they
+ * can do about it.
+ *
+ * The day count is the largest thing on the card. That is the variable this product exists to
+ * report, and it used to be set at 13px underneath a 25px line that repeated the same rulebook
+ * sentence on every card of the same permit type.
  */
 export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnabled: boolean }) {
   const v = c.verdict;
   const tone = klassTone(v.klass);
   const identifiers = itemLabel(c.item);
-  const address = titleCase(c.item.address);
+  const decision = decisionText(c);
+  const answered = recordedAnswer(c);
 
   // DOB writes in block capitals. It is quoted as it was published, in the mono, because the
   // serif on this page is what Lapse says and the mono is what it can show you.
-  const work = squash(
-    c.item.kind === "violation" ? c.item.description : c.job?.description,
-  );
+  const work = squash(c.item.kind === "violation" ? c.item.description : c.job?.description);
 
   const dataset = tailOf(c.item.source);
-  const [statement, rest] = splitStatement(headline(c));
 
   return (
     <article className="record">
-      <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_200px]">
-        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 lg:order-2 lg:flex-col lg:items-end lg:gap-y-2 lg:border-l lg:border-rule lg:pl-6 lg:pt-2 lg:text-right">
-          <span className="label" style={{ color: tone }}>
-            {v.klass ?? "no class"}
-          </span>
-          <span className="data" style={{ color: tone }}>
+      <div className="grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_212px]">
+        <div className="lg:order-2 lg:border-l lg:border-rule lg:pl-6 lg:pt-1">
+          <p className="anchor" style={{ color: tone }}>
             {daysPhrase(v.days_remaining)}
-          </span>
-          <span className="micro">{v.due_on ? `due ${longDate(v.due_on)}` : "no date on record"}</span>
-          {v.anchor_name ? <span className="micro">counted from {v.anchor_name}</span> : null}
+          </p>
+          <p className="label mt-2.5" style={{ color: tone }}>
+            {v.klass ?? "no class"}
+          </p>
+          <p className="micro mt-2">
+            {v.due_on ? `due ${longDate(v.due_on)}` : "no date on record"}
+          </p>
+          {v.anchor_name ? <p className="micro">counted from {v.anchor_name}</p> : null}
         </div>
 
         <div className="min-w-0 lg:order-1">
-          <h2 className="record-title max-w-[52ch]">{statement}</h2>
-          {rest ? (
-            <p className="prose-16 mt-3 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
-              {rest}
-            </p>
-          ) : null}
-
-          <p className="data mt-4" style={{ color: "var(--ink)" }}>
-            <span style={{ textTransform: "capitalize" }}>{c.item.kind ?? c.kind}</span>
-            {address ? ` at ${address}` : ""}
+          <h2 className="record-title max-w-[34ch]">{headline(c)}</h2>
+          <p className="micro mt-2">
+            {[
+              c.item.kind ?? c.kind,
+              identifiers,
+              c.item.bin ? `BIN ${c.item.bin}` : "",
+            ]
+              .filter(Boolean)
+              .join("  ·  ")}
           </p>
-          {identifiers || c.item.bin ? (
-            <p className="micro mt-1">
-              {[identifiers, c.item.bin ? `BIN ${c.item.bin}` : ""].filter(Boolean).join("  ·  ")}
-            </p>
+
+          {decision ? (
+            <p className="decision mt-5 max-w-[60ch]">{decision}</p>
           ) : null}
 
           {work ? (
@@ -72,19 +74,6 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
               <p className="data mt-2 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
                 {work}
               </p>
-            </div>
-          ) : null}
-
-          {v.missing.length ? (
-            <div className="mt-6">
-              <h3 className="label">What the engine could not settle</h3>
-              <ul className="mt-2 max-w-[66ch]">
-                {v.missing.map((m) => (
-                  <li key={m} className="data" style={{ color: "var(--ink-2)" }}>
-                    {squash(m)}
-                  </li>
-                ))}
-              </ul>
             </div>
           ) : null}
 
@@ -104,10 +93,10 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
           {c.status === "awaiting_approval" ? (
             <ApproveAction caseId={c.case_id} enabled={filingEnabled} />
           ) : (
-            <p className="data mt-7 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
-              Nothing is drafted for this one and nothing will be sent from this page. Lapse needs
-              the answer above before it can tell which filing is the right one.
-            </p>
+            <AnswerAction
+              caseId={c.case_id}
+              answered={answered ? (answered.event === ANSWER_YES ? "yes" : "no") : null}
+            />
           )}
 
           <p className="micro mt-6 flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
@@ -130,7 +119,9 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
                 {dataset ? `Open Data ${dataset}` : "the Open Data table"}
               </a>
             ) : null}
-            {v.evidence_id ? <span>{v.evidence_id}</span> : null}
+            {v.evidence_id ? (
+              <span style={{ overflowWrap: "anywhere" }}>{v.evidence_id}</span>
+            ) : null}
           </p>
         </div>
       </div>

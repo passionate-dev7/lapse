@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1789391712,"command":"/Users/kamal/Desktop/lapse/.venv/bin/python video/show_case.py question","env":{"SHELL":"/bin/zsh"}}
+[2.377, "o", "==========================================================================================\r\nAND WHERE A FACT IS MISSING, IT ASKS INSTEAD\r\n==========================================================================================\r\n  133 NAVY WALK, BROOKLYN\r\n  job 340111765/01  permit PL seq 09  expired 2026-05-29, 108 days ago\r\n\r\n"]
+[0.000, "o", "    Was any plumbing work done on this site after the permit expired? If nothing was\r\n    done, DOB waives the unpermitted work penalty and this is a clean renewal. If work\r\n    continued, the penalty has to be paid before the renewal can be issued at all.\r\n\r\n  status: needs_decision\r\n  There is no send button on this one at all.\r\n"]
+[0.042, "x", "0"]

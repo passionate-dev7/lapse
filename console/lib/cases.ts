@@ -113,6 +113,7 @@ export interface Case {
   verdict: Verdict;
   draft_text: string | null;
   question: string | null;
+  answer?: Answer | null;
   timeline: TimelineEntry[];
   delivery: Delivery | null;
   created_at: string;
@@ -313,16 +314,43 @@ export function decisionText(c: Case): string {
   return squash(c.question ?? c.verdict?.missing?.[0] ?? "") || "One fact is missing.";
 }
 
-export const ANSWER_YES = "answer.yes";
-export const ANSWER_NO = "answer.no";
+export interface Answer {
+  value?: "yes" | "no";
+  answers_evidence_id?: string;
+  at?: string;
+  by?: string;
+}
 
-/** The most recent answer a person gave, so a card never asks twice without showing the first. */
-export function recordedAnswer(c: Case): TimelineEntry | null {
-  const answers = (c.timeline ?? []).filter(
-    (e) => e.event === ANSWER_YES || e.event === ANSWER_NO,
-  );
-  if (!answers.length) return null;
-  return [...answers].sort((a, b) => (a.at > b.at ? 1 : a.at < b.at ? -1 : 0))[answers.length - 1];
+export interface Choices {
+  yes: string;
+  no: string;
+}
+
+/**
+ * What the two answers mean, in the contractor's words rather than as bare Yes and No.
+ *
+ * Derived from the question because the record does not carry the labels. That is a heuristic,
+ * so it is built to fail safe: a question it does not recognise as answerable with two values
+ * gets no buttons at all rather than the wrong two. Of the 39 open questions on the live
+ * portfolio, 30 are the lapsed permit question, 1 is a yes or no about a job status, and 8 ask
+ * *when* a correction will be filed, which has no yes and no no and must not be given one.
+ */
+export function answerChoices(c: Case): Choices | null {
+  const q = squash(c.question ?? c.verdict?.missing?.[0] ?? "");
+  if (!q.endsWith("?")) return null;
+  if (/^was any .*\bwork\b.*\bdone\b/i.test(q)) {
+    return { no: "No work was done", yes: "Work continued" };
+  }
+  if (/^(was|is|are|has|have|did|do|does|will|should|can)\b/i.test(q)) {
+    return { yes: "Yes", no: "No" };
+  }
+  return null;
+}
+
+/** The answer already on the record, so a card never asks twice without showing the first. */
+export function recordedAnswer(c: Case): Answer | null {
+  const answer = (c as Case & { answer?: Answer }).answer;
+  return answer?.value ? answer : null;
 }
 
 export function passedChecks(v: Verdict): Check[] {

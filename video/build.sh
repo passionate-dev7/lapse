@@ -18,8 +18,8 @@ MANIFEST="
 03_pass|casts/03_pass.cast
 04_holds|casts/03_pass.cast
 05_prose|casts/05_prose.cast
-06_question|casts/06_case.cast
-07_draft|casts/06_case.cast
+06_question|casts/06_question.cast
+07_draft|casts/07_draft.cast
 08_veto|casts/08_veto.cast
 09_unattended|casts/09_unattended.cast
 10_close|cards/10_close.png
