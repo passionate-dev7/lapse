@@ -58,7 +58,11 @@ DynamoDB table `lapse-cases`, PK `contractor` (S), SK `case_id` (S), PAY_PER_REQ
   "timeline": [{"at": "2026-09-14T18:02:11+00:00", "event": "opened", "detail": "verdict FILE"}],
   "delivery": {
     "mode": "direct | held_for_verification | simulated",
-    "to": "...", "intended": "...", "message_id": "...", "reason": "...", "sent_at": "..."
+    "to": "filing-desk@getava.xyz",
+    "intended": "filing-desk@getava.xyz",
+    "message_id": "010001a0a007514a-...",
+    "reason": "why it went where it went",
+    "sent_at": "2026-09-14T13:07:09+00:00"
   },
   "created_at": "2026-09-14T18:02:11+00:00",
   "updated_at": "2026-09-14T18:02:11+00:00"
@@ -102,6 +106,11 @@ covered instead of counting the leftovers it can see.
 | `awaiting_approval` | verdict FILE, a draft is written, waiting for a person to press send | the draft, one Approve button |
 | `needs_decision` | verdict DECIDE, one question is waiting | the question, no send button |
 | `filed` | the response left the building, `delivery.message_id` is set | the delivery record, no button |
+
+`delivery.intended` always names the party the response was for. `delivery.to`
+is where it actually went, which is the same address in `direct` mode and a
+different one in the other two. A console that renders `filed` without saying
+which mode is telling a contractor their permit is safe when it may not be.
 | `dismissed` | a later pass found the item closed | archived |
 
 `HOLD` never becomes a case. It is the silent majority and it is only counted
