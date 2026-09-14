@@ -128,13 +128,12 @@ export function QueueList({
         </div>
       ) : null}
 
-      <section className="mt-6 border-t border-rule">
+      <section className="mt-6 flex flex-col gap-5">
         {rows.map((row) => (
           <div key={row.case_id}>
             {row.approvable ? (
               <label
-                className="flex cursor-pointer items-center gap-2.5 pt-7"
-                style={{ marginBottom: "-14px" }}
+                className="flex cursor-pointer items-center gap-2.5 pb-2"
               >
                 <input
                   type="checkbox"

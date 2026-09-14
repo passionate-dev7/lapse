@@ -21,6 +21,20 @@ import {
  * Each row is a link that narrows the list, which is why the counts are not decoration: reading
  * "33 lapsed" and pressing it are the same gesture.
  */
+/**
+ * A deadline class is an engine word. A contractor reads a date, so the band is
+ * labelled with what the class means in days, not with what the engine calls it.
+ */
+const HUMAN: Record<string, string> = {
+  lapsed: "already late",
+  critical: "due this week",
+  due: "due this month",
+};
+
+function humanLabel(klass: Klass | null): string {
+  return klass ? (HUMAN[klass] ?? klass) : "no clock on these";
+}
+
 export function Overview({ shape, filter }: { shape: Shape; filter: Filter }) {
   if (!shape.total) return null;
 
@@ -33,16 +47,18 @@ export function Overview({ shape, filter }: { shape: Shape; filter: Filter }) {
 
   return (
     <section className="mt-11">
-      <h2 className="label">The shape of it, by deadline class</h2>
+      <h2 className="label">What is due, and when</h2>
 
-      <div className="mt-4 flex h-3 w-full gap-px overflow-hidden rounded-[2px]">
+      {/* Drawn to scale, ticked at every join: the queue measured, not a bar
+          chart of it. Each segment is also the control that filters to it. */}
+      <div className="dim mt-5 w-full">
         {segments.map((s) => (
           <Link
             key={s.label}
             href={hrefFor(filter, s.klass)}
-            aria-label={`${plural(s.count, "case")}, ${s.label}`}
-            title={`${plural(s.count, "case")}, ${s.label}`}
-            className="block transition-opacity duration-150 hover:opacity-70"
+            aria-label={`${plural(s.count, "case")}, ${humanLabel(s.klass)}`}
+            title={`${plural(s.count, "case")}, ${humanLabel(s.klass)}`}
+            className="dim-seg"
             style={{
               flexGrow: s.count,
               flexBasis: 0,
@@ -51,6 +67,19 @@ export function Overview({ shape, filter }: { shape: Shape; filter: Filter }) {
           />
         ))}
       </div>
+
+      <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
+        {segments.map((s) => (
+          <li key={`legend-${s.label}`} className="micro flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block h-[7px] w-[7px] rounded-[1px]"
+              style={{ background: s.klass ? klassTone(s.klass) : "var(--rule-strong)" }}
+            />
+            {s.count} {humanLabel(s.klass)}
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-8 grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_300px]">
         <ul>
@@ -124,21 +153,9 @@ function Ledger({
   const identifiers = worst ? itemLabel(worst.item ?? {}) : "";
 
   return (
-    <li className="border-t border-rule first:border-t-0">
-      <Link
-        href={href}
-        className="grid grid-cols-[10px_44px_minmax(0,1fr)] items-baseline gap-x-4 py-4 transition-colors duration-150 hover:bg-sheet-2"
-        style={{ marginInline: "-10px", paddingInline: "10px" }}
-      >
-        <span
-          aria-hidden
-          className="inline-block h-[9px] w-[9px] shrink-0 rounded-[1px]"
-          style={{ background: tone }}
-        />
-        <span
-          className="data text-right"
-          style={{ fontSize: "22px", lineHeight: 1, color: "var(--ink)" }}
-        >
+    <li>
+      <Link href={href} className="qty-row">
+        <span className="qty-count" style={{ color: tone }}>
           {count}
         </span>
         <span>
