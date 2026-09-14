@@ -106,12 +106,12 @@ covered instead of counting the leftovers it can see.
 | `awaiting_approval` | verdict FILE, a draft is written, waiting for a person to press send | the draft, one Approve button |
 | `needs_decision` | verdict DECIDE, one question is waiting | the question, no send button |
 | `filed` | the response left the building, `delivery.message_id` is set | the delivery record, no button |
+| `dismissed` | a later pass found the item closed | archived |
 
 `delivery.intended` always names the party the response was for. `delivery.to`
 is where it actually went, which is the same address in `direct` mode and a
 different one in the other two. A console that renders `filed` without saying
 which mode is telling a contractor their permit is safe when it may not be.
-| `dismissed` | a later pass found the item closed | archived |
 
 `HOLD` never becomes a case. It is the silent majority and it is only counted
 on the run record.
