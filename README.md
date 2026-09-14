@@ -156,6 +156,18 @@ Then the full pass, `.venv/bin/python -m agent.run --live --dynamo`, with the mo
 
 `filed: 0` is the correct outcome of an unattended run. Sixteen responses are written and waiting for one person to press one button. Nothing left the building on its own.
 
+Then one person approves one of them, `--only 3993569 --approve c0eb0cf5d8de4e11`, and the same pass runs again against that single item:
+
+```
+Tool #1: check_permit    permit job 500871103/02 permit PL seq 08: FILE (6 checks passed, 0 failed)
+Tool #2: open_case       c0eb0cf5d8de4e11 awaiting_approval -> dynamodb://lapse-cases/...
+Tool #3: draft_response  c0eb0cf5d8de4e11 cites 500871103
+Tool #4: file_response   {"event": "approved", "detail": "c0eb0cf5d8de4e11 was approved by the contractor"}
+                         {"event": "filed", "detail": "c0eb0cf5d8de4e11 -> lapse@getava.xyz [direct]"}
+```
+
+Thirteen seconds, one real SES send in `direct` mode with a real MessageId on the case record. The veto ran underneath the approval and had nothing to object to, which is the only circumstance in which anything is ever sent.
+
 ## Running it
 
 ```bash
@@ -187,7 +199,17 @@ Strands Agents SDK, model-agnostic, running on Anthropic `claude-sonnet-4-5-2025
 - **SES** from `lapse@getava.xyz`, with the delivery mode recorded honestly on every case
 - **CloudWatch** for the run log
 
-See `docs/architecture.html` and `docs/RECORD.md`.
+![Lapse architecture](docs/architecture.png)
+
+See `docs/architecture.html` for the interactive version with its three views, and `docs/RECORD.md` for the case record contract that `agent/`, `infra/` and `console/` all write and read.
+
+## The console
+
+**[lapse-console.vercel.app](https://lapse-console.vercel.app)**
+
+A decision queue, not a dashboard. One route, cards sorted by `verdict.days_remaining` ascending, one action per card. A card `awaiting_approval` shows the whole draft and one button. A card `needs_decision` shows the one question and has no send affordance at all. Every card carries the rule's citation, the BIS link for the record, the dataset it was read from, and the evidence id of the exact decision it rests on, because a deadline a contractor cannot check is a deadline they have no reason to believe.
+
+The healthy state is empty, and it says so in a way that does not look broken. There is a separate state for the table being missing, which says "This page is not saying you are clear", because an empty render and a broken read look identical and only one of them is good news.
 
 ## Licence
 
