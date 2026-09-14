@@ -1,0 +1,22 @@
+[project]
+name = "lapse"
+version = "0.1.0"
+description = "An agent that watches a contractor's permits and violations, and interrupts them once, when a decision is theirs."
+requires-python = ">=3.12"
+dependencies = [
+    "strands-agents>=1.55",
+    "strands-agents-tools",
+    "anthropic>=0.40",
+    "boto3>=1.35",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent*"]

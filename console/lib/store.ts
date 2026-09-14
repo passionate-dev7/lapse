@@ -1,0 +1,213 @@
+import "server-only";
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import { DynamoDBClient, QueryCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+
+import { isRun, type Case, type Run, type TimelineEntry } from "./cases";
+
+export const TABLE = process.env.LAPSE_TABLE ?? "lapse-cases";
+export const CONTRACTOR = process.env.LAPSE_CONTRACTOR ?? "VARSITY PLBG AND HTG INC";
+export const REGION = process.env.LAPSE_AWS_REGION ?? "us-east-1";
+
+export type Origin = "dynamodb" | "preview";
+
+/**
+ * A state the console can be in that is neither a queue nor a finished night shift. Each one
+ * names what is actually wrong, because "Nothing needs you" over a table that does not exist
+ * would be the most expensive sentence this product could print.
+ */
+export interface Problem {
+  headline: string;
+  detail: string;
+}
+
+export interface Read {
+  cases: Case[];
+  runs: Run[];
+  origin: Origin;
+  problem: Problem | null;
+}
+
+/**
+ * Vercel reserves every AWS_ prefixed name for its own runtime, and that runtime's role has no
+ * access to this table, so the console carries its own key under a LAPSE_ prefix.
+ */
+function credentials(): { accessKeyId: string; secretAccessKey: string } | undefined {
+  const accessKeyId = process.env.LAPSE_AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.LAPSE_AWS_SECRET_ACCESS_KEY?.trim();
+  return accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
+}
+
+function hasCredentials(): boolean {
+  return Boolean(credentials() || process.env.AWS_PROFILE);
+}
+
+let client: DynamoDBClient | null = null;
+
+function db(): DynamoDBClient {
+  if (!client) client = new DynamoDBClient({ region: REGION, credentials: credentials() });
+  return client;
+}
+
+/** Cases and run summaries share the partition key. They are told apart here and nowhere else. */
+function split(rows: Record<string, unknown>[]): { cases: Case[]; runs: Run[] } {
+  const cases: Case[] = [];
+  const runs: Run[] = [];
+  for (const row of rows) {
+    if (isRun(row as { case_id?: string; record_type?: string })) {
+      runs.push(row as unknown as Run);
+    } else {
+      const c = row as unknown as Case;
+      cases.push({
+        ...c,
+        item: c.item ?? {},
+        job: c.job ?? null,
+        timeline: c.timeline ?? [],
+        verdict: {
+          outcome: c.verdict?.outcome ?? "DECIDE",
+          klass: c.verdict?.klass ?? null,
+          due_on: c.verdict?.due_on ?? null,
+          days_remaining: c.verdict?.days_remaining ?? null,
+          anchor_name: c.verdict?.anchor_name ?? "",
+          checks: c.verdict?.checks ?? [],
+          missing: c.verdict?.missing ?? [],
+          action: c.verdict?.action ?? "",
+          artifact: c.verdict?.artifact ?? "",
+          citation: c.verdict?.citation ?? "",
+          evidence_id: c.verdict?.evidence_id ?? "",
+        },
+      });
+    }
+  }
+  return { cases, runs };
+}
+
+/**
+ * A developer copy of the table, used only when LAPSE_PREVIEW is set and only to exercise the
+ * dense rendering path against rows that exist somewhere. It cannot reach production: `.local`
+ * is in .vercelignore, so the file is not in the deployment, and the variable is not set there.
+ * When it is in use the provenance line at the foot of the page says so in those words.
+ */
+async function preview(): Promise<Read | null> {
+  if (process.env.LAPSE_PREVIEW !== "1") return null;
+  let raw: string;
+  try {
+    raw = await readFile(path.join(process.cwd(), ".local", "preview.json"), "utf8");
+  } catch {
+    return null;
+  }
+  const parsed = JSON.parse(raw) as { Items?: Record<string, unknown>[] };
+  const rows = (parsed.Items ?? []).filter((r) => r.contractor === CONTRACTOR);
+  return { ...split(rows), origin: "preview", problem: null };
+}
+
+export async function listCases(): Promise<Read> {
+  const local = await preview();
+  if (local) return local;
+
+  if (!hasCredentials()) {
+    return {
+      cases: [],
+      runs: [],
+      origin: "dynamodb",
+      problem: {
+        headline: "This deployment has no key for the case table.",
+        detail: `LAPSE_AWS_ACCESS_KEY_ID and LAPSE_AWS_SECRET_ACCESS_KEY are not set, so nothing was read from ${TABLE} in ${REGION}. An empty queue here would mean nothing was asked, not that nothing is due.`,
+      },
+    };
+  }
+
+  try {
+    const out = await db().send(
+      new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: "contractor = :c",
+        ExpressionAttributeValues: marshall({ ":c": CONTRACTOR }),
+      }),
+    );
+    const rows = (out.Items ?? []).map((item) => unmarshall(item));
+    return { ...split(rows), origin: "dynamodb", problem: null };
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    if (err.name === "ResourceNotFoundException") {
+      return {
+        cases: [],
+        runs: [],
+        origin: "dynamodb",
+        problem: {
+          headline: "The case table has not been created yet.",
+          detail: `DynamoDB in ${REGION} has no table called ${TABLE}. Lapse writes one row per decision it makes, so until the first screening pass runs there is nothing here to be right or wrong about. This page is not saying you are clear.`,
+        },
+      };
+    }
+    return {
+      cases: [],
+      runs: [],
+      origin: "dynamodb",
+      problem: {
+        headline: "The case table refused the read.",
+        detail: `DynamoDB answered ${err.name ?? "an error"} for table ${TABLE} in ${REGION}: ${err.message ?? "no message"}. Nothing below was read, so treat this page as blank rather than as clear.`,
+      },
+    };
+  }
+}
+
+export function filingFunction(): string | null {
+  const name = process.env.LAPSE_AGENT_FUNCTION?.trim();
+  if (!name || !hasCredentials()) return null;
+  return name;
+}
+
+/**
+ * Approving is two writes and the second one is not the console's. The condition on the status
+ * keeps a second tab, or a retried POST, from stacking approvals onto a case that already moved.
+ */
+export async function recordApproval(caseId: string): Promise<void> {
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const entry: TimelineEntry = {
+    at: now,
+    event: "approval.granted",
+    detail: "The contractor approved the drafted response in the console.",
+  };
+  await db().send(
+    new UpdateItemCommand({
+      TableName: TABLE,
+      Key: marshall({ contractor: CONTRACTOR, case_id: caseId }),
+      UpdateExpression:
+        "SET timeline = list_append(if_not_exists(timeline, :empty), :events), updated_at = :now",
+      ConditionExpression: "#status = :expected",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: marshall({
+        ":empty": [] as TimelineEntry[],
+        ":events": [entry],
+        ":now": now,
+        ":expected": "awaiting_approval",
+      }),
+    }),
+  );
+}
+
+/**
+ * Filing takes longer than a serverless request, so the invoke is asynchronous. A 202 means the
+ * filing function accepted the case. It never means a response reached DOB, and only that
+ * function may write `filed` and the message id that proves one did.
+ */
+export async function handOffForFiling(caseId: string): Promise<void> {
+  const name = filingFunction();
+  if (!name) throw new Error("No filing function is configured on this deployment.");
+  const { InvokeCommand, LambdaClient } = await import("@aws-sdk/client-lambda");
+  const lambda = new LambdaClient({ region: REGION, credentials: credentials() });
+  const out = await lambda.send(
+    new InvokeCommand({
+      FunctionName: name,
+      InvocationType: "Event",
+      Payload: Buffer.from(JSON.stringify({ contractor: CONTRACTOR, case_id: caseId, action: "file" })),
+    }),
+  );
+  if (out.StatusCode !== 202) {
+    throw new Error(`Lambda ${name} answered ${out.StatusCode} instead of accepting the filing.`);
+  }
+}
