@@ -321,9 +321,11 @@ export interface Answer {
   by?: string;
 }
 
-export interface Choices {
-  yes: string;
-  no: string;
+export type QuestionShape = "yes_no" | "date" | "open";
+
+export interface Choice {
+  value: string;
+  label: string;
 }
 
 /**

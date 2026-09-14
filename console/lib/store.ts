@@ -266,28 +266,6 @@ export async function recordAnswer(
   );
 }
 
-/**
- * Resolving an answered question. Same function and the same server side `only`, with no
- * `approve` key, so the pass re-reads the item with the answer on the record and turns the
- * DECIDE into a FILE with a draft. It never files: approving that draft is still a separate
- * press by a person.
- */
-export async function handOffForResolve(itemId: string): Promise<void> {
-  const name = filingFunction();
-  if (!name) throw new Error("No agent function is configured on this deployment.");
-  const { InvokeCommand, LambdaClient } = await import("@aws-sdk/client-lambda");
-  const lambda = new LambdaClient({ region: REGION, credentials: credentials() });
-  const out = await lambda.send(
-    new InvokeCommand({
-      FunctionName: name,
-      InvocationType: "Event",
-      Payload: Buffer.from(JSON.stringify({ live: true, with_model: true, only: itemId })),
-    }),
-  );
-  if (out.StatusCode !== 202) {
-    throw new Error(`Lambda ${name} answered ${out.StatusCode} instead of accepting the pass.`);
-  }
-}
 
 /**
  * Filing outlives a serverless request, so the invoke is asynchronous. A 202 means the filing

@@ -40,7 +40,7 @@ export default async function RunsPage() {
         </p>
         <h1 className="statement mt-5 max-w-[24ch]">
           {ordered.length
-            ? `${plural(ordered.length, "pass")} on record, ${sweeps.length} of them over the whole portfolio.`
+            ? `${plural(ordered.length, "pass", "passes")} on record, ${sweeps.length} of them over the whole portfolio.`
             : "No pass has written a summary yet."}
         </h1>
         <p className="prose-16 mt-6 max-w-[64ch]" style={{ color: "var(--ink-2)" }}>

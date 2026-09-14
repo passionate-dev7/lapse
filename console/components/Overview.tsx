@@ -127,21 +127,19 @@ function Ledger({
     <li className="border-t border-rule first:border-t-0">
       <Link
         href={href}
-        className="grid grid-cols-[92px_minmax(0,1fr)] items-baseline gap-x-5 py-4 transition-colors duration-150 hover:bg-sheet-2"
+        className="grid grid-cols-[10px_44px_minmax(0,1fr)] items-baseline gap-x-4 py-4 transition-colors duration-150 hover:bg-sheet-2"
         style={{ marginInline: "-10px", paddingInline: "10px" }}
       >
-        <span className="flex items-baseline gap-2.5">
-          <span
-            aria-hidden
-            className="inline-block h-[9px] w-[9px] shrink-0 translate-y-[-1px] rounded-[1px]"
-            style={{ background: tone }}
-          />
-          <span
-            className="data"
-            style={{ fontSize: "22px", lineHeight: 1, color: "var(--ink)" }}
-          >
-            {count}
-          </span>
+        <span
+          aria-hidden
+          className="inline-block h-[9px] w-[9px] shrink-0 rounded-[1px]"
+          style={{ background: tone }}
+        />
+        <span
+          className="data text-right"
+          style={{ fontSize: "22px", lineHeight: 1, color: "var(--ink)" }}
+        >
+          {count}
         </span>
         <span>
           <span className="label" style={{ color: tone }}>
