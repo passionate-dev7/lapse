@@ -188,9 +188,8 @@ export async function getCase(caseId: string): Promise<Case | null> {
 
 /**
  * The cadence as this deployment is configured, or nothing. The console's key reaches DynamoDB
- * and one Lambda, not EventBridge, so the schedule cannot be read from the system that holds it
- * and is carried here as configuration instead. It is printed with that caveat attached rather
- * than dressed up as an observation, and the run table underneath is the observation.
+ * and one Lambda, not EventBridge, so this is printed as configuration, labeled as such, rather
+ * than dressed up as an observation. The run table underneath is the actual observation.
  */
 export function schedule(): string | null {
   return process.env.LAPSE_SCHEDULE?.trim() || null;

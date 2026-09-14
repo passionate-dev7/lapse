@@ -203,6 +203,8 @@ The model reached a case an earlier pass had already sent, drafted it again, and
 
 Lapse cannot file anything with DOB, and every message it sends says so in its own body.
 
+The filing desk address in `data/contractor.json` belongs to whoever is running Lapse, not to VARSITY PLBG AND HTG INC or any other business whose public filings it reads. That is a deliberate boundary, not an oversight: permits, filings and violations are read live from NYC Open Data, which is public, but nothing in this repository mails a real contractor who did not ask for it. Every delivery in the portfolio run below lands at an `@getava.xyz` address the operator controls.
+
 DOB NOW accepts a filing from a licensed person signed in under their own login, and for most job types from a registered filing representative. There is no API, no filing address and no delegated path that would let an agent file on somebody's behalf, and there should not be one. An entry that claimed otherwise would be claiming something the city does not permit.
 
 So the end of this pipeline is the desk of the person who can actually file, holding the drafted text, the deadline, the evidence the engine checked and the rule it came from. `data/contractor.json` names that desk, and `agent/dispatch.py` records honestly what happened to each response:
@@ -312,7 +314,7 @@ FAILED tests/test_veto.py::test_the_hook_cancels_a_filing_that_is_actually_attem
 
 The test that goes red approves the case first, then calls `file_response` on a permit whose job DOB already signed off. With the hook, it is refused. Without it, a contractor gets told to renew a permit on a job that closed.
 
-The blind spot worth stating: the fast suite proves the hook refuses. It does not prove the model would decline on its own, which is a different question and is covered by `tests/test_veto.py::test_the_model_will_not_file_a_response_it_was_ordered_to_file` under `-m live`, where the real model is instructed to file anyway and does not.
+The suite proves this at two layers, on purpose. The fast layer proves the hook refuses structurally, above the model entirely, which is the property that has to hold on every run. `tests/test_veto.py::test_the_model_will_not_file_a_response_it_was_ordered_to_file`, under `-m live`, proves the other half: the real model is instructed to file anyway, against a live account, and does not. Two different claims, two different tests, and neither stands in for the other.
 
 ## Architecture
 
