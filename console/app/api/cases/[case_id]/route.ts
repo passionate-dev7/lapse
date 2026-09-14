@@ -5,11 +5,36 @@ import {
   filingFunction,
   getCase,
   handOffForFiling,
+  handOffForResolve,
   recordAnswer,
   recordApproval,
 } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * One case's current state, so the browser can poll an answered question to a terminal state
+ * instead of guessing at a timeout. A pass is asynchronous: the POST returns a 202 from Lambda,
+ * which means the pass was accepted and never that it finished, so something has to watch the
+ * row until it actually moves.
+ */
+export async function GET(_request: Request, { params }: { params: Promise<{ case_id: string }> }) {
+  const { case_id: caseId } = await params;
+  const found = await getCase(caseId);
+  if (!found) {
+    return NextResponse.json({ error: `No case ${caseId} under this contractor.` }, { status: 404 });
+  }
+  const stale = (found.verdict?.checks ?? []).some(
+    (check) => check.name === "answer_still_applies" && !check.passed,
+  );
+  return NextResponse.json({
+    status: found.status,
+    outcome: found.verdict?.outcome ?? null,
+    has_draft: Boolean(found.draft_text),
+    answer: found.answer?.value ?? null,
+    stale,
+  });
+}
 
 export async function POST(
   request: Request,
@@ -103,15 +128,29 @@ export async function POST(
       return NextResponse.json({ error: err.message ?? "The write failed." }, { status: 502 });
     }
 
-    // Deliberately no pass is started here. Kicking one off immediately after the write races
-    // it: the pass rewrites the case record without the `answer` map, so the answer is erased
-    // and the question is asked again. Proved on case 0ac6feaa03d5cb2b, where two console
-    // answers at 13:22:11 and 13:22:27 were followed by two `asked` events at 13:22:31 and
-    // 13:22:45 and no `answer` left on the row. Until the pass preserves it, the scheduled run
-    // is the only thing that should read an answer, and the copy below says exactly that.
+    const resolveId = target.item?.item_id?.trim();
+    if (!filingFunction() || !resolveId) {
+      return NextResponse.json({
+        ok: true,
+        resolving: false,
+        message: `Answered ${given}, and that is on the case now. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
+      });
+    }
+
+    try {
+      await handOffForResolve(resolveId);
+    } catch (error) {
+      return NextResponse.json({
+        ok: true,
+        resolving: false,
+        message: `Answered ${given}, and that is on the case. A pass could not be started just now (${(error as Error).message}), so the next scheduled one picks it up.`,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
-      message: `Answered ${given}, and that is on the case now. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
+      resolving: true,
+      message: `Answered ${given}. A pass is re-reading this one with your answer on it.`,
     });
   }
 

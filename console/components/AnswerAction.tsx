@@ -6,11 +6,50 @@ import { useState } from "react";
 import type { Answer, Choice } from "@/lib/cases";
 import { longDate } from "@/lib/format";
 
+interface CaseState {
+  status?: string;
+  has_draft?: boolean;
+  stale?: boolean;
+}
+
+const POLL_MS = 2500;
+const POLL_LIMIT = 24;
+
 function useAnswer(caseId: string) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+
+  /**
+   * A 202 from Lambda means the pass was accepted, not that it ran, so an answer is followed to
+   * a terminal state rather than to a timer. Terminal is the draft existing, or the engine
+   * saying the answer no longer applies because DOB's record moved underneath it. Running out of
+   * polls is reported as still running, never as done.
+   */
+  async function settle(): Promise<string> {
+    for (let i = 0; i < POLL_LIMIT; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      let state: CaseState;
+      try {
+        const res = await fetch(`/api/cases/${encodeURIComponent(caseId)}`, { cache: "no-store" });
+        if (!res.ok) continue;
+        state = (await res.json()) as CaseState;
+      } catch {
+        continue;
+      }
+      if (state.stale) {
+        return "DOB's record moved while that answer was in flight, so the question stands again. Answer it once more and the newer reading is the one that gets used.";
+      }
+      if (state.status === "awaiting_approval" && state.has_draft) {
+        return "The draft is written and is on this card now. Read it, then approve it. Nothing has been sent yet.";
+      }
+      if (state.status === "filed" || state.status === "dismissed") {
+        return `This case is now ${state.status}.`;
+      }
+    }
+    return "The pass is still running. Your answer is on the case either way, so reload in a moment to see the draft.";
+  }
 
   async function send(value: string) {
     setBusy(value);
@@ -22,15 +61,21 @@ function useAnswer(caseId: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "answer", answer: value }),
       });
-      const body = (await res.json()) as { error?: string; message?: string };
+      const body = (await res.json()) as { error?: string; message?: string; resolving?: boolean };
       if (!res.ok) {
         setNote(body.error ?? `The write failed with status ${res.status}.`);
         setFailed(true);
         setBusy(null);
         return;
       }
-      setNote(body.message ?? "Answer recorded.");
       setBusy(null);
+      if (!body.resolving) {
+        setNote(body.message ?? "Answer recorded.");
+        router.refresh();
+        return;
+      }
+      setNote(`${body.message ?? "Answered."} Watching for the draft.`);
+      setNote(await settle());
       router.refresh();
     } catch (error) {
       setNote((error as Error).message);
