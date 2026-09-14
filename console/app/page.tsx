@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ClosedList } from "@/components/ClosedList";
 import { EmptyQueue } from "@/components/EmptyQueue";
 import { ProblemState } from "@/components/ProblemState";
 import { Provenance } from "@/components/Provenance";
@@ -75,6 +76,8 @@ export default async function QueuePage() {
           <QueueCard key={item.case_id} item={item} filingEnabled={Boolean(filing)} />
         ))}
       </section>
+
+      <ClosedList cases={cases} heading="Already closed" />
 
       <Provenance origin={origin} cases={cases.length} runs={runs.length} />
     </>

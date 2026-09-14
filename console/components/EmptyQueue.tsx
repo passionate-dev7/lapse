@@ -1,12 +1,6 @@
-import {
-  heldSentence,
-  itemLabel,
-  runSentence,
-  STATUS_WORD,
-  type Case,
-  type Run,
-} from "@/lib/cases";
-import { ago, longDate, plural, stampUTC, titleCase } from "@/lib/format";
+import { ClosedList } from "@/components/ClosedList";
+import { heldSentence, runSentence, type Case, type Run } from "@/lib/cases";
+import { ago, longDate, stampUTC, titleCase } from "@/lib/format";
 
 /**
  * The healthy state, and the point of the product. It is not a blank page with a shrug on it:
@@ -22,11 +16,6 @@ export function EmptyQueue({
   run: Run | null;
   contractor: string;
 }) {
-  const closed = cases
-    .filter((c) => c.status === "filed" || c.status === "dismissed")
-    .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""))
-    .slice(0, 6);
-
   const neverRan = !run && !cases.length;
 
   return (
@@ -54,37 +43,7 @@ export function EmptyQueue({
         </p>
       ) : null}
 
-      {closed.length ? (
-        <div className="mt-16">
-          <h2 className="label">Closed without you</h2>
-          <ul className="mt-5 border-t border-rule">
-            {closed.map((c) => (
-              <li
-                key={c.case_id}
-                className="grid grid-cols-1 gap-x-6 gap-y-1 border-b border-rule py-4 sm:grid-cols-[150px_1fr_auto] sm:items-baseline"
-              >
-                <span className="micro">{longDate(c.updated_at?.slice(0, 10))}</span>
-                <span className="prose-16">
-                  {titleCase(c.item?.address) || itemLabel(c.item ?? {}) || c.case_id}
-                  <span className="micro" style={{ marginLeft: "10px" }}>
-                    {itemLabel(c.item ?? {})}
-                  </span>
-                </span>
-                <span className="micro" style={{ color: "var(--ink-2)" }}>
-                  {c.status === "filed" && c.delivery?.message_id
-                    ? `filed, ${c.delivery.message_id}`
-                    : STATUS_WORD[c.status]}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {cases.length > closed.length ? (
-            <p className="micro mt-4">
-              {plural(cases.length - closed.length, "older case")} not shown.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      <ClosedList cases={cases} heading="Closed without you" />
     </section>
   );
 }
