@@ -283,6 +283,35 @@ export async function recordAnswer(
 
 
 /**
+ * Resolving an answered question. Same function and the same server side `only`, with no
+ * `approve` key, so the pass re-reads the item with the answer on the record and turns the
+ * DECIDE into a FILE with a draft. It never files: approving that draft is still a separate
+ * press by a person.
+ *
+ * This used to destroy the answer. `open_case` rebuilt the case from the feeds and carried over
+ * only the fields the feeds cannot regenerate, and `answer` was not on that list, so a pass
+ * started this quickly replaced the case body and took the answer with it. Re-enabled only after
+ * the carry list was fixed and the race was re-run against the live table: answer written,
+ * invoke 1.5 seconds behind it, and the row reached FILE with a draft and the answer still on it.
+ */
+export async function handOffForResolve(itemId: string): Promise<void> {
+  const name = filingFunction();
+  if (!name) throw new Error("No agent function is configured on this deployment.");
+  const { InvokeCommand, LambdaClient } = await import("@aws-sdk/client-lambda");
+  const lambda = new LambdaClient({ region: REGION, credentials: credentials() });
+  const out = await lambda.send(
+    new InvokeCommand({
+      FunctionName: name,
+      InvocationType: "Event",
+      Payload: Buffer.from(JSON.stringify({ live: true, with_model: true, only: itemId })),
+    }),
+  );
+  if (out.StatusCode !== 202) {
+    throw new Error(`Lambda ${name} answered ${out.StatusCode} instead of accepting the pass.`);
+  }
+}
+
+/**
  * Filing outlives a serverless request, so the invoke is asynchronous. A 202 means the filing
  * function accepted the case. It never means a response reached DOB, and only that function may
  * write `filed` and the message id that proves one did.
