@@ -510,7 +510,14 @@ def build_agent(
             # happened to the permit, not how many times a pass looked at it.
             case["created_at"] = previous.get("created_at", case["created_at"])
             case["timeline"] = list(previous.get("timeline", []))
-            for carried in ("delivery", "draft_text", "question"):
+            # `answer` belongs on this list for the same reason `delivery`
+            # does. A pass rebuilds the case from the feeds, and anything the
+            # feeds cannot regenerate has to be carried across or it is
+            # destroyed. An answer is a thing a person typed once; losing it
+            # sends them the same question again and quietly discards the
+            # commitment they made. This was a real bug: the console wrote an
+            # answer, a pass ran four seconds later, and the answer was gone.
+            for carried in ("delivery", "draft_text", "question", "answer"):
                 if previous.get(carried):
                     case[carried] = previous[carried]
             if (previous.get("delivery") or {}).get("message_id"):
