@@ -178,17 +178,23 @@ Then the full pass, `.venv/bin/python -m agent.run --live --dynamo`, with the mo
 
 `filed: 0` is the correct outcome of an unattended run. Sixteen responses are written and waiting for one person to press one button. Nothing left the building on its own.
 
-Then one person approves one of them, `--only 3993569 --approve c0eb0cf5d8de4e11`, and the same pass runs again against that single item:
+Then one person presses Approve in the console. That invokes the deployed Lambda with the case id and the DOB item id read off the record server-side, and the same pass runs again against that single item:
 
-```
-Tool #1: check_permit    permit job 500871103/02 permit PL seq 08: FILE (6 checks passed, 0 failed)
-Tool #2: open_case       c0eb0cf5d8de4e11 awaiting_approval -> dynamodb://lapse-cases/...
-Tool #3: draft_response  c0eb0cf5d8de4e11 cites 500871103
-Tool #4: file_response   {"event": "approved", "detail": "c0eb0cf5d8de4e11 was approved by the contractor"}
-                         {"event": "filed", "detail": "c0eb0cf5d8de4e11 -> lapse@getava.xyz [direct]"}
+```json
+{"considered": 1, "cases_opened": 1, "drafted": 1, "filed": 1, "vetoed": 0,
+ "items_screened": 235, "held": 179, "source": "live NYC Open Data"}
 ```
 
-Thirteen seconds, one real SES send in `direct` mode with a real MessageId on the case record. The veto ran underneath the approval and had nothing to object to, which is the only circumstance in which anything is ever sent.
+```
+delivery  {"mode": "direct", "to": "filing-desk@getava.xyz",
+           "intended": "filing-desk@getava.xyz",
+           "message_id": "010001a0a007514a-d4842c75-bf29-412d-9ecb-34fd93c6eb0f-000000",
+           "reason": "filing-desk@getava.xyz is a verified identity in this account"}
+timeline  ["opened", "drafted", "redrafted", "filed"]
+evidence  s3://lapse-evidence-079415246611/runs/varsity-plbg-and-htg-inc/2026-09-14T13-07-11Z.json
+```
+
+Sixteen seconds end to end. A real SES send in `direct` mode with a real MessageId, and the sender is `lapse@getava.xyz` while the recipient is the filing desk, which is a different address on purpose. The veto ran underneath the approval and had nothing to object to, which is the only circumstance in which anything is ever sent. The timeline says `redrafted` rather than a second `drafted` because the case was already open and a pass that reopens one preserves what the earlier pass established instead of replaying it.
 
 ## Running it
 
