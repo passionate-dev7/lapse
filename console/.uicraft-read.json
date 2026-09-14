@@ -1,13 +1,13 @@
 {
-  "as": "decision queue for a small NYC construction contractor who is on a roof, not at a desk, reading it once a week",
-  "dials": "6/2/8",
-  "type": "Newsreader",
-  "surface": "cool neutral paper, no cream",
-  "accent": "seal green for the one action, oxblood to grey ramp for the four deadline classes",
-  "radius": "4",
+  "as": "DOB permit and violation deadline sheet for a small NYC contractor, drawn as a cyanotype drawing",
+  "dials": "6/2/7",
+  "type": "Barlow Condensed + Barlow + IBM Plex Mono",
+  "surface": "blueprint blue, dark only",
+  "accent": "chalk white with a deadline ramp",
+  "radius": "0",
   "showpiece": "none",
   "direction": "design-taste-frontend",
   "review": "anti-ai-slop-frontend",
   "cwd": "/Users/kamal/Desktop/lapse/console",
-  "ts": "2026-09-14T11:57:43Z"
+  "ts": "2026-09-14T20:25:08Z"
 }
