@@ -8,6 +8,7 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
 import { isRun, type Case, type Run, type TimelineEntry } from "./cases";
 
+
 export const TABLE = process.env.LAPSE_TABLE ?? "lapse-cases";
 export const CONTRACTOR = process.env.LAPSE_CONTRACTOR ?? "VARSITY PLBG AND HTG INC";
 export const REGION = process.env.LAPSE_AWS_REGION ?? "us-east-1";
@@ -155,6 +156,16 @@ export async function listCases(): Promise<Read> {
   }
 }
 
+/**
+ * One case, read back from the table. The approve route uses this rather than trusting the
+ * browser for the DOB item id, because that id is what the filing function restricts its pass
+ * to, and a client that could name it could aim the agent at somebody else's permit.
+ */
+export async function getCase(caseId: string): Promise<Case | null> {
+  const { cases } = await listCases();
+  return cases.find((c) => c.case_id === caseId) ?? null;
+}
+
 export function filingFunction(): string | null {
   const name = process.env.LAPSE_AGENT_FUNCTION?.trim();
   if (!name || !hasCredentials()) return null;
@@ -191,11 +202,15 @@ export async function recordApproval(caseId: string): Promise<void> {
 }
 
 /**
- * Filing takes longer than a serverless request, so the invoke is asynchronous. A 202 means the
- * filing function accepted the case. It never means a response reached DOB, and only that
- * function may write `filed` and the message id that proves one did.
+ * Filing outlives a serverless request, so the invoke is asynchronous. A 202 means the filing
+ * function accepted the case. It never means a response reached DOB, and only that function may
+ * write `filed` and the message id that proves one did.
+ *
+ * `only` narrows the pass to the single DOB item behind this case, which is what keeps this one
+ * agent turn rather than a full portfolio sweep. `approve` carries the human decision through,
+ * so the function files instead of stopping at a draft.
  */
-export async function handOffForFiling(caseId: string): Promise<void> {
+export async function handOffForFiling(caseId: string, itemId: string): Promise<void> {
   const name = filingFunction();
   if (!name) throw new Error("No filing function is configured on this deployment.");
   const { InvokeCommand, LambdaClient } = await import("@aws-sdk/client-lambda");
@@ -204,7 +219,9 @@ export async function handOffForFiling(caseId: string): Promise<void> {
     new InvokeCommand({
       FunctionName: name,
       InvocationType: "Event",
-      Payload: Buffer.from(JSON.stringify({ contractor: CONTRACTOR, case_id: caseId, action: "file" })),
+      Payload: Buffer.from(
+        JSON.stringify({ live: true, with_model: true, only: itemId, approve: [caseId] }),
+      ),
     }),
   );
   if (out.StatusCode !== 202) {

@@ -188,6 +188,29 @@ env -i PATH="$PATH" HOME="$HOME" .venv/bin/python -m pytest tests -q
 
 Everything in `data/` is a real Socrata response captured by `scripts/capture.py` and stamped with the `$where` that produced it. The suite reads those, never a fixture written to make a parser look right, so a schema change at the city's end shows up as a failure rather than as a silently empty portfolio.
 
+### Proving the suite can fail
+
+A guardrail that has only ever been tested by code that agrees with it has not been tested. Break the veto and the suite has to notice. From a clean clone, change one line in `FilingVeto.inspect`:
+
+```python
+        refusal = self.ledger.may_file(cid)
+-       if refusal:
++       if False:
+```
+
+```
+=== RED ===
+FAILED tests/test_veto.py::test_the_hook_cancels_a_filing_that_is_actually_attempted
+1 failed, 161 passed, 1 skipped, 2 deselected
+
+=== GREEN, after git checkout -- agent/lapse_agent.py ===
+162 passed, 1 skipped, 2 deselected
+```
+
+The test that goes red approves the case first, then calls `file_response` on a permit whose job DOB already signed off. With the hook, it is refused. Without it, a contractor gets told to renew a permit on a job that closed.
+
+The blind spot worth stating: the fast suite proves the hook refuses. It does not prove the model would decline on its own, which is a different question and is covered by `tests/test_veto.py::test_the_model_will_not_file_a_response_it_was_ordered_to_file` under `-m live`, where the real model is instructed to file anyway and does not.
+
 ## Architecture
 
 Strands Agents SDK, model-agnostic, running on Anthropic `claude-sonnet-4-5-20250929`. Bedrock and AgentCore are not available on this AWS account, which is an AWS India (AISPL) account where every model in every region returns `Operation not allowed`. Strands being model-agnostic is what made that a configuration line rather than a dead end, and the rest of AWS carries the load:
