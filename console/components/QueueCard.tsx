@@ -1,8 +1,9 @@
-import { AnswerAction } from "@/components/AnswerAction";
+import { ChoiceAnswer, DateAnswer } from "@/components/AnswerAction";
 import { ApproveAction } from "@/components/ApproveAction";
 import { ChecksTable } from "@/components/ChecksTable";
 import {
   answerChoices,
+  answerShape,
   decisionText,
   headline,
   itemLabel,
@@ -27,6 +28,7 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
   const identifiers = itemLabel(c.item);
   const decision = decisionText(c);
   const answer = recordedAnswer(c);
+  const shape = answerShape(c);
   const choices = answerChoices(c);
 
   // DOB writes in block capitals. It is quoted as it was published, in the mono, because the
@@ -93,13 +95,15 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
 
           {c.status === "awaiting_approval" ? (
             <ApproveAction caseId={c.case_id} enabled={filingEnabled} />
-          ) : choices ? (
-            <AnswerAction caseId={c.case_id} choices={choices} answer={answer} />
+          ) : shape === "yes_no" && choices.length ? (
+            <ChoiceAnswer caseId={c.case_id} choices={choices} answer={answer} />
+          ) : shape === "date" ? (
+            <DateAnswer caseId={c.case_id} answer={answer} />
           ) : (
             <p className="data mt-7 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
-              This one asks for a date rather than a yes or a no, and the console has nowhere to
-              put a date yet, so there is no control here that would do anything. Nothing is
-              drafted and nothing will be sent from this page.
+              This question does not have a set of answers Lapse can offer you here, so there is
+              no control on this card that would do anything. It is on the record and a pass will
+              carry it. Nothing is drafted and nothing will be sent from this page.
             </p>
           )}
 

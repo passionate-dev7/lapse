@@ -148,8 +148,16 @@ class ContractorAnswer:
     answered_by: str
 
     @property
+    def as_date(self) -> date | None:
+        """The date the contractor named, if the answer was a date at all."""
+        try:
+            return date.fromisoformat(self.value.strip())
+        except (AttributeError, ValueError):
+            return None
+
+    @property
     def usable(self) -> bool:
-        return self.value in ("yes", "no")
+        return self.value in ("yes", "no") or self.as_date is not None
 
     def applies_to(self, verdict: "Verdict") -> bool:
         return self.usable and self.answers_evidence_id == verdict.evidence_id
@@ -169,6 +177,8 @@ class Verdict:
     citation: str = ""
     rule_key: str = ""
     missing: tuple[str, ...] = ()
+    question_shape: str = "none"
+    choices: tuple[dict, ...] = ()
 
     @property
     def passed(self) -> tuple[Check, ...]:
@@ -307,6 +317,8 @@ def _result(
     deadline: Deadline | None = None,
     rule: Rule | None = None,
     missing: tuple[str, ...] = (),
+    question_shape: str = "none",
+    choices: tuple[dict, ...] = (),
 ) -> Verdict:
     return Verdict(
         outcome=outcome,
@@ -321,6 +333,30 @@ def _result(
         citation=rule.citation if rule else "",
         rule_key=rule.key if rule else "",
         missing=missing,
+        question_shape=question_shape if outcome is Outcome.DECIDE else "none",
+        choices=choices if outcome is Outcome.DECIDE else (),
+    )
+
+
+def _answered_on(answer: "ContractorAnswer") -> date | None:
+    """The day an answer was given, off its own timestamp."""
+    try:
+        return date.fromisoformat(answer.answered_at[:10])
+    except (AttributeError, ValueError, TypeError):
+        return None
+
+
+def _yes_no_choices() -> tuple[dict, ...]:
+    """The two answers, in the city's own words, common case first.
+
+    These come out of the rulebook rather than out of the console, because they
+    are what the two provisions say and a surface that paraphrases them starts
+    drifting from the rule the moment the rule changes.
+    """
+    answers = lapsed_answers()
+    return (
+        {"value": "no", "label": answers["no"]["label"]},
+        {"value": "yes", "label": answers["yes"]["label"]},
     )
 
 
@@ -385,6 +421,7 @@ def decide_permit(
             label=label,
             address=address,
             missing=(f"the expiry date DOB printed on permit {permit.label}",),
+            question_shape="open",
         )
 
     job_check = _job_check(permit, job)
@@ -401,6 +438,7 @@ def decide_permit(
                 missing=(
                     f"whether job {permit.job}/{permit.job_doc} at {permit.address} is still open",
                 ),
+                question_shape="open",
             )
         if job.is_stopped:
             return _result(
@@ -414,6 +452,7 @@ def decide_permit(
                     f"whether the {job.status_text or 'withdrawal'} on job "
                     f"{permit.job}/{permit.job_doc} has been lifted",
                 ),
+                question_shape="open",
             )
         return _result(Outcome.HOLD, checks, kind=kind, item_id=item_id, label=label, address=address)
 
@@ -451,6 +490,7 @@ def decide_permit(
                 f"which DOB filing renews a {permit.permit_type} permit; "
                 "the rulebook does not carry one with a citation",
             ),
+            question_shape="open",
         )
 
     in_window = deadline.klass is not Klass.CLEAR
@@ -506,6 +546,7 @@ def decide_permit(
                     f"is still live. The permit lapsed {abs(days)} days ago, past the "
                     "window in which DOB will renew rather than make you file again",
                 ),
+                question_shape="open",
             )
         question = rule.lapsed_question or (
             f"whether any work was done at {permit.address} after this permit "
@@ -522,6 +563,8 @@ def decide_permit(
             deadline=deadline,
             rule=rule,
             missing=(question,),
+            question_shape="yes_no",
+            choices=_yes_no_choices(),
         )
         if answer is None or not answer.applies_to(asked):
             if answer is not None and answer.usable:
@@ -548,6 +591,8 @@ def decide_permit(
                     deadline=deadline,
                     rule=rule,
                     missing=(question,),
+                    question_shape="yes_no",
+                    choices=_yes_no_choices(),
                 )
             return asked
 
@@ -586,9 +631,19 @@ def decide_permit(
 
 
 def decide_violation(
-    violation: Violation, *, today: date, reading: StatusReading | None = None
+    violation: Violation,
+    *,
+    today: date,
+    reading: StatusReading | None = None,
+    answer: ContractorAnswer | None = None,
 ) -> Verdict:
-    """A violation's verdict. One soft check, and the model may replace it."""
+    """A violation's verdict. One soft check, and the model may replace it.
+
+    `answer` only ever supplies a date, and only for the classes where the city
+    publishes a cure path and no deadline. It cannot move a violation the
+    structured checks closed, because those run first and return before it is
+    ever consulted.
+    """
     kind, item_id = "violation", violation.violation_id or violation.number
     label = f"{violation.type_code} {violation.number}"
     address = violation.address
@@ -637,6 +692,7 @@ def decide_violation(
             label=label,
             address=address,
             missing=(f"the date DOB issued violation {violation.number}",),
+            question_shape="open",
         )
 
     text_check = (
@@ -648,6 +704,7 @@ def decide_violation(
     if not text_check.passed:
         return _result(Outcome.HOLD, checks, kind=kind, item_id=item_id, label=label, address=address)
 
+    issued_on = violation.issued_on
     rule = violation_rule(violation.type_code)
     has_rule = rule is not None
     checks.append(
@@ -671,6 +728,7 @@ def decide_violation(
                 f"which DOB filing closes a type {violation.type_code} violation; "
                 "the rulebook does not carry one with a citation",
             ),
+            question_shape="open",
         )
 
     # Whose obligation this is. A violation attaches to a building, and for the
@@ -701,22 +759,96 @@ def decide_violation(
         )
 
     if rule.window_days is None:
+        # DOB publishes the cure path for this class and no deadline in days.
+        # Inventing one would be the easiest lie in this program, so the clock
+        # goes back to the contractor: they name the date they intend to respond
+        # by, and from then on it is a deadline like any other and runs through
+        # the same four classes. Say nothing until it approaches.
+        question = (
+            f"when a {rule.label} response is due. DOB publishes the cure path "
+            f"({rule.artifact}) but no deadline this engine could find, so the "
+            "clock on this one is yours to set"
+        )
+
+        def ask(extra: list[Check] | None = None) -> Verdict:
+            return _result(
+                Outcome.DECIDE,
+                checks + (extra or []),
+                kind=kind,
+                item_id=item_id,
+                label=label,
+                address=address,
+                rule=rule,
+                missing=(question,),
+                question_shape="date",
+            )
+
+        if answer is None or not answer.applies_to(ask()):
+            if answer is not None and answer.usable:
+                return ask(
+                    [
+                        Check(
+                            "answer_still_applies",
+                            False,
+                            f"a date was set on {answer.answered_at} against a different "
+                            "reading of this violation; DOB's record has moved since, so "
+                            "the question stands again",
+                        )
+                    ]
+                )
+            return ask()
+
+        chosen = answer.as_date
+        # Refused only if it was already in the past when they set it. A date
+        # they set in good faith that has since gone by is not a bad answer, it
+        # is the alarm this whole program exists to raise, and sending them back
+        # to the same question would lose the commitment they made.
+        set_on = _answered_on(answer) or today
+        if chosen is None or chosen < set_on:
+            return ask(
+                [
+                    Check(
+                        "response_date_is_a_future_date",
+                        False,
+                        f"{answer.value!r} is not a date this engine can run a clock to; "
+                        "it needs an ISO date that was not already in the past when it "
+                        "was set",
+                    )
+                ]
+            )
+
+        days = (chosen - today).days
+        deadline = Deadline(
+            anchor=issued_on,
+            anchor_name="the date you set",
+            due_on=chosen,
+            days_remaining=days,
+            klass=classify(days),
+        )
+        checks.append(
+            Check(
+                f"response_date_set_by[{answer.answered_by}]",
+                True,
+                f"you set {chosen} as the date you intend to respond by "
+                f"(on {answer.answered_at}); DOB publishes no deadline for a "
+                f"{rule.label}, so this is the clock Lapse keeps",
+            )
+        )
+        in_window = deadline.klass is not Klass.CLEAR
+        checks.append(
+            Check("within_action_window", in_window, f"{deadline}, against your own date")
+        )
         return _result(
-            Outcome.DECIDE,
+            Outcome.FILE if in_window else Outcome.HOLD,
             checks,
             kind=kind,
             item_id=item_id,
             label=label,
             address=address,
+            deadline=deadline,
             rule=rule,
-            missing=(
-                f"when a {rule.label} response is due. DOB publishes the cure path "
-                f"({rule.artifact}) but no deadline this engine could find, so the "
-                "clock on this one is yours to set",
-            ),
         )
 
-    issued_on = violation.issued_on
     due_on = issued_on + timedelta(days=rule.window_days)
     days = (due_on - today).days
     deadline = Deadline(
@@ -774,6 +906,7 @@ def decide_violation(
                     "in play and curing, contesting or paying are all still open to "
                     "you. That call is yours, not mine",
                 ),
+                question_shape="open",
             )
 
     return _result(

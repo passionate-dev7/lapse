@@ -74,8 +74,9 @@ def triage(
         )
         out.append(("permit", item_id, verdict))
     for violation in portfolio.violations:
-        verdict = decide_violation(violation, today=today)
-        out.append(("violation", violation.violation_id or violation.number, verdict))
+        item_id = violation.violation_id or violation.number
+        verdict = decide_violation(violation, today=today, answer=answers.get(item_id))
+        out.append(("violation", item_id, verdict))
 
     order = {Outcome.FILE: 0, Outcome.DECIDE: 1, Outcome.HOLD: 2}
     out.sort(
