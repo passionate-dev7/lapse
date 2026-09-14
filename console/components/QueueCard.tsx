@@ -41,9 +41,18 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
     <article className="record">
       <div className="grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_212px]">
         <div className="lg:order-2 lg:border-l lg:border-rule lg:pl-6 lg:pt-1">
-          <p className="anchor" style={{ color: tone }}>
-            {daysPhrase(v.days_remaining)}
-          </p>
+          {/* The anchor is a number. When the engine could not date the item there is no number
+              to anchor, and setting "no clock on this one" at 42px shouts an absence, so the
+              phrase drops to body weight and the card leads on its question instead. */}
+          {v.days_remaining === null || v.days_remaining === undefined ? (
+            <p className="data" style={{ color: "var(--ink-3)" }}>
+              {daysPhrase(v.days_remaining)}
+            </p>
+          ) : (
+            <p className="anchor" style={{ color: tone }}>
+              {daysPhrase(v.days_remaining)}
+            </p>
+          )}
           <p className="label mt-2.5" style={{ color: tone }}>
             {v.klass ?? "no class"}
           </p>
