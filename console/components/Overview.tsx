@@ -4,9 +4,11 @@ import { itemLabel, klassTone, type Case, type Klass } from "@/lib/cases";
 import { daysPhrase, plural, titleCase } from "@/lib/format";
 import {
   boroughOf,
+  NO_KLASS,
   toQuery,
   withPatch,
   type Filter,
+  type KlassFilter,
   type Overview as Shape,
   type SiteBucket,
 } from "@/lib/view";
@@ -83,7 +85,7 @@ export function Overview({ shape, filter }: { shape: Shape; filter: Filter }) {
           </ul>
           {shape.crowded.length ? (
             <p className="micro mt-5 max-w-[34ch]" style={{ color: "var(--ink-2)" }}>
-              {`${plural(shape.crowded.length, "address")} carry more than one open case. ${titleCase(shape.crowded[0].site)} carries ${shape.crowded[0].count}.`}
+              {`${plural(shape.crowded.length, "address", "addresses")} ${shape.crowded.length === 1 ? "carries" : "carry"} more than one open case. ${titleCase(shape.crowded[0].site)} carries ${shape.crowded[0].count}.`}
             </p>
           ) : null}
         </div>
@@ -98,11 +100,9 @@ export function Overview({ shape, filter }: { shape: Shape; filter: Filter }) {
  * that instead". Pressing the one already on clears it and gives the whole queue back.
  */
 function hrefFor(filter: Filter, klass: Klass | null): string {
-  if (klass === null) {
-    return toQuery(withPatch(filter, { klass: [], state: [], kind: [], q: "unclassed-marker" }));
-  }
-  const already = filter.klass.length === 1 && filter.klass[0] === klass;
-  return toQuery(withPatch(filter, { klass: already ? [] : [klass] }));
+  const value: KlassFilter = klass ?? NO_KLASS;
+  const already = filter.klass.length === 1 && filter.klass[0] === value;
+  return toQuery(withPatch(filter, { klass: already ? [] : [value] }));
 }
 
 function Ledger({

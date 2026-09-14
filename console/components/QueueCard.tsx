@@ -2,7 +2,7 @@ import { AnswerAction } from "@/components/AnswerAction";
 import { ApproveAction } from "@/components/ApproveAction";
 import { ChecksTable } from "@/components/ChecksTable";
 import {
-  ANSWER_YES,
+  answerChoices,
   decisionText,
   headline,
   itemLabel,
@@ -26,7 +26,8 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
   const tone = klassTone(v.klass);
   const identifiers = itemLabel(c.item);
   const decision = decisionText(c);
-  const answered = recordedAnswer(c);
+  const answer = recordedAnswer(c);
+  const choices = answerChoices(c);
 
   // DOB writes in block capitals. It is quoted as it was published, in the mono, because the
   // serif on this page is what Lapse says and the mono is what it can show you.
@@ -92,11 +93,14 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
 
           {c.status === "awaiting_approval" ? (
             <ApproveAction caseId={c.case_id} enabled={filingEnabled} />
+          ) : choices ? (
+            <AnswerAction caseId={c.case_id} choices={choices} answer={answer} />
           ) : (
-            <AnswerAction
-              caseId={c.case_id}
-              answered={answered ? (answered.event === ANSWER_YES ? "yes" : "no") : null}
-            />
+            <p className="data mt-7 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
+              This one asks for a date rather than a yes or a no, and the console has nowhere to
+              put a date yet, so there is no control here that would do anything. Nothing is
+              drafted and nothing will be sent from this page.
+            </p>
           )}
 
           <p className="micro mt-6 flex flex-wrap items-baseline gap-x-5 gap-y-1.5">

@@ -56,7 +56,7 @@ export function ClosedList({ cases, heading }: { cases: Case[]; heading: string 
                     ? "var(--ink-2)"
                     : c.delivery?.mode === "direct"
                       ? "var(--seal)"
-                      : "var(--pending-ink)",
+                      : "var(--critical)",
                 // An SES message id is 60 characters of mono and there is no space in it, so
                 // without this it runs off the right edge of a phone.
                 overflowWrap: "anywhere",
