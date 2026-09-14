@@ -42,7 +42,14 @@ or HOLD from arithmetic on dates, supersession and job status, with no prompt re
 `console/app/api/cases/[case_id]/route.ts` writes the human approval to DynamoDB under a
 condition on the status and hands the case to the `lapse-run` filing function, which sets `filed`
 and writes the delivery record with the real message id. The console never claims a response left
-the building; only the function that sent one may write that.
+the building; only the function that sent one may write that. Batch approval presses that same
+endpoint once per selected case, so the status condition, the item id read back off the record
+and the filing function's veto apply to every case in a batch exactly as they do to one press.
+
+Approval evidence, 2026-09-14: a batch of three drafts approved from the console at 13:32:53 UTC
+reached status `filed` in `lapse-cases` with three distinct SES message ids
+(`010001a0a01f1abc-...`, `010001a0a01f30d0-...`, `010001a0a01f3173-...`), each delivered to
+filing-desk@getava.xyz. Read back from DynamoDB, not from the page that started it.
 
 Metric plan: share of a screened portfolio that is held without a word. Target 3 of every 4.
 Read off the run record in `lapse-cases`, where `held / items_screened` is written per pass, and
