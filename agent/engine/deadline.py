@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import Enum
 
-from agent.engine.rulebook import Rule, permit_rule, violation_rule
+from agent.engine.rulebook import Rule, lapsed_answers, permit_rule, violation_rule
 from agent.feeds.jobs import Job
 from agent.feeds.permits import LIVE_STATUSES, Permit
 from agent.feeds.violations import Violation
@@ -125,6 +125,34 @@ class StatusReading:
     @property
     def usable(self) -> bool:
         return self.confidence >= self.MIN_CONFIDENCE
+
+
+@dataclass(frozen=True)
+class ContractorAnswer:
+    """The contractor's answer to the one question a DECIDE put to them.
+
+    It is scoped to the exact verdict it answers, by `answers_evidence_id`. That
+    matters because an evidence id carries a hash of the checks the verdict
+    rested on, so if DOB's record moved between the question being asked and the
+    answer coming back, the answer no longer applies and the question is asked
+    again rather than resolved against facts that have changed underneath it.
+
+    An answer is not a decision about whether anything is due. It supplies one
+    fact that no dataset holds, whether work continued on a site after a permit
+    expired, and the engine decides what follows from it.
+    """
+
+    value: str
+    answers_evidence_id: str
+    answered_at: str
+    answered_by: str
+
+    @property
+    def usable(self) -> bool:
+        return self.value in ("yes", "no")
+
+    def applies_to(self, verdict: "Verdict") -> bool:
+        return self.usable and self.answers_evidence_id == verdict.evidence_id
 
 
 @dataclass(frozen=True)
@@ -296,7 +324,13 @@ def _result(
     )
 
 
-def decide_permit(permit: Permit, job: Job | None, *, today: date) -> Verdict:
+def decide_permit(
+    permit: Permit,
+    job: Job | None,
+    *,
+    today: date,
+    answer: ContractorAnswer | None = None,
+) -> Verdict:
     """A permit's verdict. Entirely arithmetic and joins; no prose is read.
 
     There is no soft check here on purpose. A permit issuance row carries no
@@ -304,6 +338,13 @@ def decide_permit(permit: Permit, job: Job | None, *, today: date) -> Verdict:
     model to be better at than a comparison. The model's work on a permit is
     the renewal request, written from the job's description, and it happens
     after this function has already decided whether one is owed.
+
+    `answer` is the contractor's reply to a question an earlier pass asked
+    them. It supplies one fact no dataset holds and it resolves a DECIDE into a
+    FILE. It cannot do anything else: it is only consulted inside the lapsed
+    branch, after every structured check has already passed, and an answer that
+    does not match the verdict it was given for is refused rather than applied
+    to a reading that has since changed.
     """
     kind, item_id = "permit", permit.permit_id or permit.label
     label, address = permit.label, permit.address
@@ -466,7 +507,12 @@ def decide_permit(permit: Permit, job: Job | None, *, today: date) -> Verdict:
                     "window in which DOB will renew rather than make you file again",
                 ),
             )
-        return _result(
+        question = rule.lapsed_question or (
+            f"whether any work was done at {permit.address} after this permit "
+            "expired, because DOB will not renew it until the unpermitted work "
+            "penalty is paid or waived"
+        )
+        asked = _result(
             Outcome.DECIDE,
             checks,
             kind=kind,
@@ -475,14 +521,56 @@ def decide_permit(permit: Permit, job: Job | None, *, today: date) -> Verdict:
             address=address,
             deadline=deadline,
             rule=rule,
-            missing=(
-                rule.lapsed_question
-                or (
-                    f"whether any work was done at {permit.address} after this permit "
-                    "expired, because DOB will not renew it until the unpermitted work "
-                    "penalty is paid or waived"
-                ),
-            ),
+            missing=(question,),
+        )
+        if answer is None or not answer.applies_to(asked):
+            if answer is not None and answer.usable:
+                # An answer that no longer matches the verdict it was given for
+                # is not discarded quietly. The check says so, because a
+                # contractor who answered a question deserves to know their
+                # answer was superseded rather than ignored.
+                checks.append(
+                    Check(
+                        "answer_still_applies",
+                        False,
+                        f"answered {answer.value!r} on {answer.answered_at} against a "
+                        "different reading of this permit; DOB's record has moved since, "
+                        "so the question stands again",
+                    )
+                )
+                return _result(
+                    Outcome.DECIDE,
+                    checks,
+                    kind=kind,
+                    item_id=item_id,
+                    label=label,
+                    address=address,
+                    deadline=deadline,
+                    rule=rule,
+                    missing=(question,),
+                )
+            return asked
+
+        branch = lapsed_answers()[answer.value]
+        checks.append(
+            Check(
+                f"answered_by[{answer.answered_by}]",
+                True,
+                f"{branch['label']} (answered {answer.answered_at}). {branch['quote']}",
+            )
+        )
+        return Verdict(
+            outcome=Outcome.FILE,
+            checks=tuple(checks),
+            kind=kind,
+            item_id=item_id,
+            label=label,
+            address=address,
+            deadline=deadline,
+            action=branch["action"],
+            artifact=rule.artifact,
+            citation=lapsed_answers()["citation"],
+            rule_key=rule.key,
         )
 
     return _result(

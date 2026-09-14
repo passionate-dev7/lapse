@@ -1,4 +1,4 @@
-import { plural, squash } from "./format";
+import { plural, squash, titleCase } from "./format";
 
 /**
  * The shapes in docs/RECORD.md, and nothing beyond them. Every field on screen is read from a
@@ -122,8 +122,8 @@ export interface Case {
 export interface Run {
   contractor: string;
   case_id: string;
-  record_type: "run";
-  status: "run_summary";
+  record_type: "run" | "approval";
+  status: "run_summary" | "approval_summary";
   finished_at: string;
   permits_screened: number;
   violations_screened: number;
@@ -140,12 +140,39 @@ export interface Run {
   timeline?: TimelineEntry[];
   created_at?: string;
   updated_at?: string;
+
+  /** How many of the screened items the engine flagged, split by the verdict it reached. */
+  engine_file?: number;
+  engine_decide?: number;
+  /** How many flagged items this pass actually took to the agent. A sweep takes all of them. */
+  considered?: number;
+  asked?: number;
+  agent_held?: number;
+  /** The four deadline classes as the engine counted them across the whole screened corpus. */
+  classes?: Partial<Record<Klass, number>>;
 }
 
 export const RUN_PREFIX = "run#";
 
-export function isRun(raw: { case_id?: string; record_type?: string }): boolean {
-  return raw.record_type === "run" || (raw.case_id ?? "").startsWith(RUN_PREFIX);
+export type RecordKind = "case" | "run" | "other";
+
+/**
+ * Which of the three kinds of row this is. `record_type` wins whenever it is present, and the
+ * `run#` sort key is only consulted when it is absent.
+ *
+ * This matters more than it looks. An approval summary is written under a `run#` sort key but
+ * carries `record_type: "approval"`, so a test of "run, or the key starts with run#" counts it
+ * as a screening pass, and the newest pass on the page becomes the one item the contractor just
+ * approved instead of the sweep over their whole portfolio. Anything that is neither a case nor
+ * a run is dropped here rather than falling through into the case list, where it would inflate
+ * the count in the provenance line.
+ */
+export function recordKind(raw: { case_id?: string; record_type?: string }): RecordKind {
+  const type = raw.record_type;
+  if (type === "run") return "run";
+  if (type === "case") return "case";
+  if (type) return "other";
+  return (raw.case_id ?? "").startsWith(RUN_PREFIX) ? "run" : "case";
 }
 
 /**
@@ -165,6 +192,34 @@ export function latestRun(runs: Run[]): Run | null {
     if (!latest || runKey(run) > runKey(latest)) latest = run;
   }
   return latest;
+}
+
+/**
+ * Whether a pass covered the portfolio or was aimed at one case.
+ *
+ * Approving writes a run record too, because a filing pass is a pass. It screens the same corpus
+ * and opens one case, so quoting the newest record makes the headline say a sweep opened one
+ * case. The agent now stamps those `record_type: "approval"`, and that is the first test here.
+ *
+ * The second test is defensive and covers the records already in the table from before that
+ * stamp existed. A pass narrowed to a single item still screens everything but takes exactly one
+ * flagged item to the agent, so `considered` falls far below the count the engine flagged. A
+ * sweep takes all of them. Passes that ran with no agent turn at all carry no `considered` and
+ * are sweeps: they read the whole corpus and opened nothing, which is a true thing to report.
+ */
+export function isSweep(run: Run): boolean {
+  if (run.record_type === "approval" || run.status === "approval_summary") return false;
+  if (run.considered === undefined || run.considered === null) return true;
+  const flagged = (run.engine_file ?? 0) + (run.engine_decide ?? 0);
+  return run.considered >= flagged;
+}
+
+export function latestSweep(runs: Run[]): Run | null {
+  return latestRun(runs.filter(isSweep));
+}
+
+export function byNewest(runs: Run[]): Run[] {
+  return [...runs].sort((a, b) => (runKey(a) > runKey(b) ? -1 : runKey(a) < runKey(b) ? 1 : 0));
 }
 
 /** The two statuses that cost the contractor attention. Everything else is history. */
@@ -231,12 +286,43 @@ export function itemLabel(item: Item): string {
   return parts.join(", ");
 }
 
-/** The one sentence at the top of a card: what the engine says to do, or what it needs to know. */
+/**
+ * The serif line on a card names the place, because a contractor recognises a site before they
+ * recognise a job number and long before they recognise a permit type code.
+ *
+ * It used to be `verdict.action` for a FILE case. That is the rulebook's sentence for a class
+ * of permit, not a sentence about this permit, so thirteen cards on the live queue carried a
+ * byte-identical headline and the only thing separating them was a digit in the mono line
+ * underneath. The address is on every record and it is different on almost every one.
+ */
 export function headline(c: Case): string {
-  if (c.status === "needs_decision") {
-    return squash(c.question ?? c.verdict?.missing?.[0] ?? "") || "One fact is missing.";
-  }
-  return squash(c.verdict?.action ?? "") || "A response is drafted and waiting.";
+  const address = titleCase(c.item?.address);
+  if (address) return address;
+  const label = itemLabel(c.item ?? {});
+  return label || c.case_id;
+}
+
+/**
+ * The decision itself, under the place. For DECIDE this is the model's question, which is
+ * already written about this specific item. For FILE there is no per item sentence that is not
+ * either the rulebook's generic text or the whole draft, so the card says nothing here and lets
+ * the artifact line and the draft speak.
+ */
+export function decisionText(c: Case): string {
+  if (c.status !== "needs_decision") return "";
+  return squash(c.question ?? c.verdict?.missing?.[0] ?? "") || "One fact is missing.";
+}
+
+export const ANSWER_YES = "answer.yes";
+export const ANSWER_NO = "answer.no";
+
+/** The most recent answer a person gave, so a card never asks twice without showing the first. */
+export function recordedAnswer(c: Case): TimelineEntry | null {
+  const answers = (c.timeline ?? []).filter(
+    (e) => e.event === ANSWER_YES || e.event === ANSWER_NO,
+  );
+  if (!answers.length) return null;
+  return [...answers].sort((a, b) => (a.at > b.at ? 1 : a.at < b.at ? -1 : 0))[answers.length - 1];
 }
 
 export function passedChecks(v: Verdict): Check[] {

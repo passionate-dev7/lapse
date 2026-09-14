@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { RUN_PREFIX } from "@/lib/cases";
-import { filingFunction, getCase, handOffForFiling, recordApproval } from "@/lib/store";
+import { decisionText, RUN_PREFIX } from "@/lib/cases";
+import {
+  filingFunction,
+  getCase,
+  handOffForFiling,
+  recordAnswer,
+  recordApproval,
+} from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +24,59 @@ export async function POST(
     );
   }
 
-  const body = (await request.json().catch(() => ({}))) as { action?: string };
-  if (body.action !== "approve") {
+  const body = (await request.json().catch(() => ({}))) as { action?: string; answer?: string };
+  if (body.action !== "approve" && body.action !== "answer") {
     return NextResponse.json(
-      { error: `This endpoint takes one action, "approve". It was given ${JSON.stringify(body.action ?? null)}.` },
+      {
+        error: `This endpoint takes two actions, "approve" and "answer". It was given ${JSON.stringify(body.action ?? null)}.`,
+      },
       { status: 400 },
     );
+  }
+
+  if (body.action === "answer") {
+    if (body.answer !== "yes" && body.answer !== "no") {
+      return NextResponse.json(
+        {
+          error: `An answer is "yes" or "no". It was given ${JSON.stringify(body.answer ?? null)}.`,
+        },
+        { status: 400 },
+      );
+    }
+    const target = await getCase(caseId);
+    if (!target) {
+      return NextResponse.json(
+        { error: `No case ${caseId} under this contractor. Nothing was written.` },
+        { status: 404 },
+      );
+    }
+    if (target.status !== "needs_decision") {
+      return NextResponse.json(
+        {
+          error: `This case is ${target.status}, not waiting on a decision, so there is no question here to answer. Reload to see where it got to.`,
+        },
+        { status: 409 },
+      );
+    }
+    try {
+      await recordAnswer(caseId, body.answer, decisionText(target));
+    } catch (error) {
+      const err = error as { name?: string; message?: string };
+      if (err.name === "ConditionalCheckFailedException") {
+        return NextResponse.json(
+          {
+            error:
+              "This case moved on before the answer landed, so nothing was written. Reload to see where it got to.",
+          },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ error: err.message ?? "The write failed." }, { status: 502 });
+    }
+    return NextResponse.json({
+      ok: true,
+      message: `Answered ${body.answer}. That is on the case now and the next screening pass reads it. Nothing has been sent and this permit is not yet handled.`,
+    });
   }
 
   const name = filingFunction();

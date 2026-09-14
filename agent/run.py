@@ -24,7 +24,13 @@ import sys
 from datetime import date, datetime
 from typing import Iterable
 
-from agent.engine.deadline import Outcome, Verdict, decide_permit, decide_violation
+from agent.engine.deadline import (
+    ContractorAnswer,
+    Outcome,
+    Verdict,
+    decide_permit,
+    decide_violation,
+)
 from agent.engine.portfolio import CONTRACTOR, Portfolio, fetch, load_snapshot
 from agent.lapse_agent import CaseSink, DynamoSink, FileSink, build_agent, case_id, verdict_record
 
@@ -33,17 +39,40 @@ def _emit(**payload) -> None:
     print(json.dumps(payload, default=str), flush=True)
 
 
-def triage(portfolio: Portfolio, *, today: date) -> list[tuple[str, str, Verdict]]:
+def load_answers(contractor: str, sink: CaseSink) -> dict[str, ContractorAnswer]:
+    """Answers the contractor has already given, keyed by DOB item id.
+
+    A question Lapse asked yesterday is answered in the console, which writes
+    the answer onto the case. This is where the next pass picks it up, so an
+    answer is given once and then acts on every pass after it without anybody
+    being asked twice.
+    """
+    reader = getattr(sink, "answers_for", None)
+    if callable(reader):
+        return reader(contractor)
+    return {}
+
+
+def triage(
+    portfolio: Portfolio,
+    *,
+    today: date,
+    answers: dict[str, ContractorAnswer] | None = None,
+) -> list[tuple[str, str, Verdict]]:
     """Every item in the portfolio, with the engine's verdict, in urgency order.
 
     Sorted so a reader sees the worst first: FILE before DECIDE before HOLD,
     then by days remaining. A lapsed permit and a violation due in three days
     interleave correctly because both carry the same deadline shape.
     """
+    answers = answers or {}
     out: list[tuple[str, str, Verdict]] = []
     for permit in portfolio.permits:
-        verdict = decide_permit(permit, portfolio.job_for(permit), today=today)
-        out.append(("permit", permit.permit_id or permit.label, verdict))
+        item_id = permit.permit_id or permit.label
+        verdict = decide_permit(
+            permit, portfolio.job_for(permit), today=today, answer=answers.get(item_id)
+        )
+        out.append(("permit", item_id, verdict))
     for violation in portfolio.violations:
         verdict = decide_violation(violation, today=today)
         out.append(("violation", violation.violation_id or violation.number, verdict))
@@ -137,7 +166,14 @@ def run(
         source=portfolio.source,
     )
 
-    triaged = triage(portfolio, today=as_of)
+    answers = load_answers(portfolio.contractor, sink)
+    if answers:
+        _emit(
+            event="answers_loaded",
+            count=len(answers),
+            detail="questions this contractor has already answered, applied to this pass",
+        )
+    triaged = triage(portfolio, today=as_of, answers=answers)
     stats = summarise(triaged)
     _emit(event="triage", **stats)
 
@@ -165,6 +201,11 @@ def run(
         "held": sum(1 for _, _, v in triaged if v.outcome is Outcome.HOLD),
         "engine_file": sum(1 for _, _, v in triaged if v.outcome is Outcome.FILE),
         "engine_decide": sum(1 for _, _, v in triaged if v.outcome is Outcome.DECIDE),
+        "answers_applied": sum(
+            1
+            for _, _, v in triaged
+            if any(c.name.startswith("answered_by[") for c in v.checks)
+        ),
         "classes": stats["classes"],
         "source": portfolio.source,
         "as_of": as_of.isoformat(),
@@ -193,7 +234,7 @@ def run(
         return counts
 
     agent, ledger, events = build_agent(
-        portfolio, sink=sink, approvals=approvals, today=as_of
+        portfolio, sink=sink, approvals=approvals, today=as_of, answers=answers
     )
 
     # One item per turn. A single prompt carrying 238 items would spend its

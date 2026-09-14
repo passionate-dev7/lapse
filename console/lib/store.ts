@@ -6,7 +6,14 @@ import path from "node:path";
 import { DynamoDBClient, QueryCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
-import { isRun, type Case, type Run, type TimelineEntry } from "./cases";
+import {
+  ANSWER_NO,
+  ANSWER_YES,
+  recordKind,
+  type Case,
+  type Run,
+  type TimelineEntry,
+} from "./cases";
 
 
 export const TABLE = process.env.LAPSE_TABLE ?? "lapse-cases";
@@ -53,12 +60,17 @@ function db(): DynamoDBClient {
   return client;
 }
 
-/** Cases and run summaries share the partition key. They are told apart here and nowhere else. */
+/**
+ * Cases, run summaries and everything else share the partition key. They are told apart here
+ * and nowhere else, so no screen can render an approval summary as a case or as a pass.
+ */
 function split(rows: Record<string, unknown>[]): { cases: Case[]; runs: Run[] } {
   const cases: Case[] = [];
   const runs: Run[] = [];
   for (const row of rows) {
-    if (isRun(row as { case_id?: string; record_type?: string })) {
+    const kind = recordKind(row as { case_id?: string; record_type?: string });
+    if (kind === "other") continue;
+    if (kind === "run") {
       runs.push(row as unknown as Run);
     } else {
       const c = row as unknown as Case;
@@ -196,6 +208,42 @@ export async function recordApproval(caseId: string): Promise<void> {
         ":events": [entry],
         ":now": now,
         ":expected": "awaiting_approval",
+      }),
+    }),
+  );
+}
+
+/**
+ * The answer to the one question, written onto the case and nowhere else.
+ *
+ * The status deliberately does not move. `docs/RECORD.md` has four statuses and none of them
+ * means "answered", and inventing a fifth here would put a value in the table that the engine
+ * has never agreed to read. What this does is real and complete on its own terms: the decision
+ * the product asked for is now on the record, in a timeline event whose name carries the value,
+ * so the next pass can act on it. The card says exactly that and claims nothing more.
+ */
+export async function recordAnswer(caseId: string, answer: "yes" | "no", question: string) {
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const entry: TimelineEntry = {
+    at: now,
+    event: answer === "yes" ? ANSWER_YES : ANSWER_NO,
+    detail: question
+      ? `The contractor answered ${answer} in the console to: ${question}`
+      : `The contractor answered ${answer} in the console.`,
+  };
+  await db().send(
+    new UpdateItemCommand({
+      TableName: TABLE,
+      Key: marshall({ contractor: CONTRACTOR, case_id: caseId }),
+      UpdateExpression:
+        "SET timeline = list_append(if_not_exists(timeline, :empty), :events), updated_at = :now",
+      ConditionExpression: "#status = :expected",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: marshall({
+        ":empty": [] as TimelineEntry[],
+        ":events": [entry],
+        ":now": now,
+        ":expected": "needs_decision",
       }),
     }),
   );
