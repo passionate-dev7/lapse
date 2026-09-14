@@ -1,0 +1,6 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1789391546,"command":"/tmp/lapse-film/mutate.sh","env":{"SHELL":"/bin/zsh"}}
+[0.032, "o", "$ # the filing veto is now deleted\r\n"]
+[3.370, "o", "=========================== short test summary info ============================\r\nFAILED tests/test_veto.py::test_the_hook_cancels_a_filing_that_is_actually_attempted\r\n1 failed, 12 passed, 1 deselected in 3.00s\r\n"]
+[0.003, "o", "\r\n$ # restored\r\n"]
+[0.960, "o", "...................                                                      [100%]\r\n162 passed, 1 skipped, 2 deselected in 0.69s\r\n"]
+[0.000, "x", "0"]

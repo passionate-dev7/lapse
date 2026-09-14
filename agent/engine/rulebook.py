@@ -131,3 +131,27 @@ def all_rules() -> tuple[Rule, ...]:
 
 def meta() -> dict:
     return load()[2]
+
+
+@lru_cache(maxsize=1)
+def lapsed_answers() -> dict:
+    """What a contractor's yes or no to the lapsed permit question changes.
+
+    Kept in the rulebook rather than in the engine because it is a rule, not
+    logic: 1 RCNY 102-04(d)(6) waives the unpermitted work penalty where
+    nothing was done after expiry, and (a)(2) bars the renewal until it is paid
+    where something was. The engine only has to know which branch an answer
+    selects.
+    """
+    blob = json.loads(RULEBOOK.read_text())
+    answers = blob.get("lapsed_answers") or {}
+    for branch in ("yes", "no"):
+        entry = answers.get(branch) or {}
+        if not (entry.get("action") and entry.get("quote")):
+            raise RulebookError(
+                f"lapsed_answers.{branch} has no cited action; an answer that changes "
+                "what a contractor is told has to change it for a published reason"
+            )
+    if not answers.get("citation", "").startswith("https://"):
+        raise RulebookError("lapsed_answers has no https citation")
+    return answers

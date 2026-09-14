@@ -141,6 +141,24 @@
     line-height: 1.6;
   }
 
+  /* The deadline, which is the variable this whole product is about. It was set at 13px under a
+     25px headline that said the same generic thing on every card, so the constant was twice the
+     size of the variable. It is now the largest thing on a card. */
+  .anchor {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: clamp(30px, 1.6vw + 22px, 42px);
+    line-height: 1.05;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The decision under the place: the model's question about this specific item. */
+  .decision {
+    font-size: clamp(17px, 0.4vw + 15.5px, 19px);
+    line-height: 1.42;
+  }
+
   .cite {
     color: var(--seal);
     text-decoration: underline;

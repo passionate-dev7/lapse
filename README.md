@@ -107,6 +107,44 @@ So the engine stops and asks one question, and the question is worth answering: 
 
 That is what "interrupts them exactly once, when the decision is genuinely theirs" means here. It is not a design preference. It is where the city put the fork.
 
+## What happens when they answer
+
+A question that can never become anything is a dead end wearing the costume of a decision, so the answer closes the loop.
+
+The engine asks, in the contractor's own terms, because the model turns the rulebook's generic question into a site-specific one:
+
+> Was any plumbing work done at 850 GRAND STREET after September 11, 2026?
+
+They answer in the console. The next pass picks it up off the case record and the verdict moves, for a reason it can cite:
+
+```
+{"event": "answers_loaded", "count": 1}
+verdict   permit job 302582729/02 permit PL seq 08: FILE (8 checks passed, 0 failed)
+outcome   FILE
+action    Renew it. DOB waives the unpermitted work penalty where a permit expired and
+          nothing was done after it, so this is a clean renewal with the standard fee.
+citation  https://www.nyc.gov/assets/buildings/rules/1_RCNY_102-04.pdf
+check     answered_by[the contractor]: No work was done after the permit expired
+          (answered 2026-09-14T13:13:29+00:00). "Where a permit (other than for temporary
+          construction equipment) expired and no work was performed after the permit's
+          expiration."
+```
+
+and the draft that comes out says it:
+
+> Job 302582729/02 Permit PL Seq 08 at 850 Grand Street, Brooklyn expired September 11, 2026. The work covered exterior lighting replacement, removal and reinstallation of rooftop mechanical equipment, replacement of mechanical systems as indicated, and replacement of roof drains. Renew this permit in DOB NOW: Build or eFiling before September 11, 2028. No work was performed after expiration, so DOB waives the unpermitted work penalty.
+
+Answer "yes" instead and it still becomes a filing, but a different one: the penalty has to be paid before DOB will issue the renewal at all, under 1 RCNY 102-04(a)(2), and the draft says to pay first rather than file first. Both branches are in `data/rulebook.json` with their own verbatim quotes, and a test asserts they do not produce the same instruction, because if they did the question was theatre.
+
+**An answer is scoped to the exact verdict it answers.** `evidence_id` carries a hash of the checks the verdict rested on, so if DOB's record moved between the question going out and the answer coming back, the answer was given about something else. It is refused, visibly:
+
+```
+FAIL answer_still_applies: answered 'no' on 2026-09-14 against a different reading of
+     this permit; DOB's record has moved since, so the question stands again
+```
+
+An answer supplies one fact no dataset holds. It is not a veto override: on a permit whose job DOB signed off, the structured checks fail long before the answer is ever consulted, and `tests/test_answers.py::test_an_answer_cannot_resurrect_a_permit_the_checks_closed` is what keeps that true.
+
 ## What the model is actually for
 
 A keyword list already handles most of DOB's closure language, and I measured exactly how much. Of the 581 ACTIVE violations carrying a disposition comment, the shallow check in `outstanding_by_text` correctly calls **574** of them closed. It leaves **7** open. Run `.venv/bin/python -m scripts.measure_prose`:

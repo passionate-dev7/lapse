@@ -253,5 +253,19 @@
       "quote": "To remove a DOB violation from a property record, the condition must be corrected and proof of that correction must be provided to the issuing unit.",
       "respondent": "either"
     }
-  ]
+  ],
+  "lapsed_answers": {
+    "note": "What a contractor's answer to the lapsed permit question changes. The question is which of these two provisions applies, and only somebody who was on the site can say. Both quotes are verbatim from 1 RCNY 102-04 and are verified by tests/test_rulebook_provenance.py.",
+    "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_102-04.pdf",
+    "no": {
+      "label": "No work was done after the permit expired",
+      "action": "Renew it. DOB waives the unpermitted work penalty where a permit expired and nothing was done after it, so this is a clean renewal with the standard fee and no penalty to clear first.",
+      "quote": "Where a permit (other than for temporary construction equipment) expired and no work was performed after the permit\u2019s expiration."
+    },
+    "yes": {
+      "label": "Work continued after the permit expired",
+      "action": "The unpermitted work penalty has to be paid before DOB will issue the renewal at all. Pay it, then renew. Do not file the renewal first and expect it to go through.",
+      "quote": "Except as otherwise provided in this section, payment of the civil penalty is required before: (1) Issuance of a permit for work in a particular space when work was performed without a permit in such space and the penalty for such unpermitted work has not been paid. (2) Renewal of a permit for work performed after the expiration of a permit when the penalty for such unpermitted work has not been paid."
+    }
+  }
 }

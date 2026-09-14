@@ -42,6 +42,7 @@ from strands.models.anthropic import AnthropicModel
 from strands.vended_interventions import HumanInTheLoop
 
 from agent.engine.deadline import (
+    ContractorAnswer,
     Outcome,
     StatusReading,
     Verdict,
@@ -99,6 +100,7 @@ class Ledger:
     approvals: set[str] = field(default_factory=set)
     pending_approval: set[str] = field(default_factory=set)
     asked: set[str] = field(default_factory=set)
+    answers: dict[str, ContractorAnswer] = field(default_factory=dict)
     considered: int = 0
 
     def record(self, cid: str, verdict: Verdict) -> None:
@@ -226,6 +228,33 @@ class CaseSink:
     def read(self, contractor: str, case_id: str) -> dict | None:
         return None
 
+    def cases_for(self, contractor: str) -> list[dict]:
+        """Every case this contractor has. Used to pick up their answers."""
+        return []
+
+    def answers_for(self, contractor: str) -> dict[str, "ContractorAnswer"]:
+        """Answers keyed by DOB item id, from whatever the console wrote.
+
+        An answer lives on the case rather than in a table of its own, because
+        the thing it answers is a case and a question detached from what it was
+        asked about is not evidence of anything.
+        """
+        from agent.engine.deadline import ContractorAnswer
+
+        out: dict[str, ContractorAnswer] = {}
+        for case in self.cases_for(contractor):
+            recorded = case.get("answer") or {}
+            item_id = (case.get("item") or {}).get("item_id")
+            if not (recorded.get("value") and item_id):
+                continue
+            out[item_id] = ContractorAnswer(
+                value=str(recorded["value"]).strip().lower(),
+                answers_evidence_id=recorded.get("answers_evidence_id", ""),
+                answered_at=recorded.get("at", ""),
+                answered_by=recorded.get("by", "the contractor"),
+            )
+        return out
+
 
 class FileSink(CaseSink):
     def __init__(self, root: Path | None = None) -> None:
@@ -241,6 +270,14 @@ class FileSink(CaseSink):
         path = self.root / f"{case_id}.json"
         return json.loads(path.read_text()) if path.exists() else None
 
+    def cases_for(self, contractor: str) -> list[dict]:
+        cases = []
+        for path in self.root.glob("*.json"):
+            case = json.loads(path.read_text())
+            if case.get("contractor") == contractor:
+                cases.append(case)
+        return cases
+
 
 class DynamoSink(CaseSink):
     def __init__(self) -> None:
@@ -252,6 +289,9 @@ class DynamoSink(CaseSink):
 
     def read(self, contractor: str, case_id: str) -> dict | None:
         return self.store.get_case(contractor, case_id)
+
+    def cases_for(self, contractor: str) -> list[dict]:
+        return self.store.list_cases(contractor)
 
 
 SYSTEM_PROMPT = """You work for one construction contractor in New York City. Your job is to make sure nothing in their portfolio lapses without them knowing, and to have the paperwork already written when something is about to.
@@ -290,6 +330,7 @@ def build_agent(
     model_id: str = MODEL_ID,
     approvals: set[str] | None = None,
     today: date | None = None,
+    answers: dict[str, ContractorAnswer] | None = None,
 ) -> tuple[Agent, Ledger, list[dict]]:
     contractor = portfolio.contractor
     ledger = Ledger(
@@ -299,6 +340,7 @@ def build_agent(
         portfolio=portfolio,
         today=today or portfolio.as_of,
         approvals=set(approvals or ()),
+        answers=dict(answers or {}),
     )
     sink = sink or FileSink()
     events: list[dict] = []
@@ -387,7 +429,13 @@ def build_agent(
             return f"No permit {permit_id}. Known: {sorted(ledger.permits)[:12]}"
         ledger.considered += 1
         job = portfolio.job_for(permit)
-        verdict = decide_permit(permit, job, today=ledger.today)
+        # The contractor's answer to an earlier question is applied here too,
+        # not only in the pass's own triage. If it were applied in one place and
+        # not the other, the queue and the agent would disagree about whether a
+        # question was still open, and the contractor would be asked twice.
+        verdict = decide_permit(
+            permit, job, today=ledger.today, answer=ledger.answers.get(permit_id)
+        )
         cid = case_id(contractor, "permit", permit_id)
         ledger.record(cid, verdict)
         log(

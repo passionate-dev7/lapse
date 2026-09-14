@@ -13,19 +13,16 @@ H=1080
 
 # beat | visual sources, comma separated, split evenly across the beat
 MANIFEST="
-01_feed|casts/01_feed.cast
-02_gap|cards/02_gap.png
-03_pair|casts/03_pair.cast
-04_run|casts/04_run.cast
-05_gate|casts/04_run.cast
-06_console|../console/shots/queue.png,../console/shots/case.png
-07_veto|casts/07_veto.cast
-08_mutation|casts/08_mutation.cast
+01_city|casts/01_city.cast
+02_silence|cards/02_silence.png
+03_pass|casts/03_pass.cast
+04_holds|casts/03_pass.cast
+05_prose|casts/05_prose.cast
+06_question|casts/06_case.cast
+07_draft|casts/06_case.cast
+08_veto|casts/08_veto.cast
 09_unattended|casts/09_unattended.cast
-10_breadth|casts/10_breadth.cast
-11_label|../data/labels/luum_upc_label.png,casts/11_label.cast
-12_reply|casts/12_reply.cast
-13_close|cards/13_close.png
+10_close|cards/10_close.png
 "
 
 render_cast() {
@@ -88,9 +85,9 @@ done
 
 printf "file '%s'\n" "${segments[@]/#/$PWD/}" > clips/all.txt
 ffmpeg -y -loglevel error -f concat -safe 0 -i clips/all.txt \
-  -c:v libx264 -pix_fmt yuv420p -preset medium -crf 20 -c:a aac -b:a 192k out/pullback.mp4
+  -c:v libx264 -pix_fmt yuv420p -preset medium -crf 20 -c:a aac -b:a 192k out/lapse.mp4
 
 echo
-echo "runtime: $(ffprobe -v error -show_entries format=duration -of csv=p=0 out/pullback.mp4)s"
+echo "runtime: $(ffprobe -v error -show_entries format=duration -of csv=p=0 out/lapse.mp4)s"
 echo "silence check (any gap over 1.5s is a defect):"
-ffmpeg -i out/pullback.mp4 -af silencedetect=noise=-35dB:d=1.5 -f null - 2>&1 | grep -i "silence_duration" || echo "  none"
+ffmpeg -i out/lapse.mp4 -af silencedetect=noise=-35dB:d=1.5 -f null - 2>&1 | grep -i "silence_duration" || echo "  none"

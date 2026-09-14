@@ -25,7 +25,7 @@ from functools import lru_cache
 
 import pytest
 
-from agent.engine.rulebook import Rule, all_rules
+from agent.engine.rulebook import Rule, all_rules, lapsed_answers
 
 RULES = all_rules()
 
@@ -70,6 +70,26 @@ def _quoted_rules() -> list[tuple[Rule, str, str, str]]:
             url = rule.citation if field == "quote" else rule.respondent_citation
             if quote and url.lower().endswith(".pdf"):
                 out.append((rule, field, url, quote))
+
+    # The two branches a contractor's answer selects change what they are told
+    # to do, so they carry quotes and those get checked like any other rule.
+    answers = lapsed_answers()
+    url = answers.get("citation", "")
+    if url.lower().endswith(".pdf"):
+        for branch in ("yes", "no"):
+            synthetic = Rule(
+                key=f"lapsed_answer:{branch}",
+                applies_to="permit",
+                label=answers[branch]["label"],
+                action=answers[branch]["action"],
+                artifact="",
+                window_days=None,
+                grace_days=None,
+                default_days=None,
+                citation=url,
+                quote=answers[branch]["quote"],
+            )
+            out.append((synthetic, "quote", url, answers[branch]["quote"]))
     return out
 
 

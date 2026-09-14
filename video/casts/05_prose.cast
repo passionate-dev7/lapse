@@ -1,0 +1,5 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1789391564,"command":"env PYTHONPATH=/tmp/lapse-film /Users/kamal/Desktop/lapse/.venv/bin/python -m scripts.measure_prose","env":{"SHELL":"/bin/zsh"}}
+[8.273, "o", "\r\nViolations categorised ACTIVE since 2021-09-14 carrying a disposition comment: 581\r\n  the keyword check calls closed: 574\r\n  the keyword check leaves open:  7\r\n\r\n$where=violation_category like '%ACTIVE%' AND issue_date >= '20210914' AND disposition_comments IS NOT NULL\r\n\r\nWhat the keyword check leaves open, which is what the model has to read:\r\n"]
+[0.004, "o", "     1  000810 PAID INVOICE 90876458\r\n     1  000810 PAID INVOICE 90876457\r\n     1  000810 PAID INVOICE 90876456\r\n     1  CHALLENGE APPROVED\r\n     1  000810 PAID INVOICE 90888813\r\n     1  000810 PAID INVOICE 90728566\r\n"]
+[0.000, "o", "     1  000810 PAID INVOICE 90728568\r\n\r\n"]
+[0.026, "x", "0"]
