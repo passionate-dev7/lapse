@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "An agent that watches a contractor's permits and violations, and interrupts them once, when a decision is theirs."
 requires-python = ">=3.12"
 dependencies = [
+    "pypdf>=5.0",
     "strands-agents>=1.55",
     "strands-agents-tools",
     "anthropic>=0.40",

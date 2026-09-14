@@ -34,8 +34,8 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
 
   return (
     <article className="record">
-      <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[1fr_212px]">
-        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 lg:order-2 lg:flex-col lg:items-end lg:gap-y-2 lg:pt-2 lg:text-right">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_200px]">
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 lg:order-2 lg:flex-col lg:items-end lg:gap-y-2 lg:border-l lg:border-rule lg:pl-6 lg:pt-2 lg:text-right">
           <span className="label" style={{ color: tone }}>
             {v.klass ?? "no class"}
           </span>
@@ -47,9 +47,9 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
         </div>
 
         <div className="min-w-0 lg:order-1">
-          <h2 className="record-title max-w-[44ch]">{statement}</h2>
+          <h2 className="record-title max-w-[52ch]">{statement}</h2>
           {rest ? (
-            <p className="prose-16 mt-3 max-w-[64ch]" style={{ color: "var(--ink-2)" }}>
+            <p className="prose-16 mt-3 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
               {rest}
             </p>
           ) : null}
@@ -69,7 +69,7 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
               <h3 className="label">
                 {c.item.kind === "violation" ? "What DOB wrote on it" : "The work this permit covers"}
               </h3>
-              <p className="data mt-2 max-w-[74ch]" style={{ color: "var(--ink-2)" }}>
+              <p className="data mt-2 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
                 {work}
               </p>
             </div>
@@ -78,7 +78,7 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
           {v.missing.length ? (
             <div className="mt-6">
               <h3 className="label">What the engine could not settle</h3>
-              <ul className="mt-2 max-w-[74ch]">
+              <ul className="mt-2 max-w-[66ch]">
                 {v.missing.map((m) => (
                   <li key={m} className="data" style={{ color: "var(--ink-2)" }}>
                     {squash(m)}
@@ -104,7 +104,7 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
           {c.status === "awaiting_approval" ? (
             <ApproveAction caseId={c.case_id} enabled={filingEnabled} />
           ) : (
-            <p className="data mt-7 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>
+            <p className="data mt-7 max-w-[66ch]" style={{ color: "var(--ink-2)" }}>
               Nothing is drafted for this one and nothing will be sent from this page. Lapse needs
               the answer above before it can tell which filing is the right one.
             </p>

@@ -70,7 +70,19 @@ def summarise(triaged: Iterable[tuple[str, str, Verdict]]) -> dict:
     return {"outcomes": counts, "classes": classes}
 
 
-def record_run(contractor: str, counts: dict, *, sink: CaseSink) -> None:
+def _record_type(only: str | None, approvals: set[str] | None) -> str:
+    """A sweep and a single approval are not the same kind of event.
+
+    The console reads the newest `run` record to say how much of the portfolio
+    the last pass covered. A pass aimed at one approved case screens the same
+    235 items but opens one, so filing it as a `run` makes the console report a
+    sweep that opened one case. It is a different event and it gets a different
+    record_type, which the console ignores for headline numbers.
+    """
+    return "approval" if (only or approvals) else "run"
+
+
+def record_run(contractor: str, counts: dict, *, sink: CaseSink, record_type: str = "run") -> None:
     """Write down what the pass actually covered.
 
     Without this the console can only count the cases it can see, which makes
@@ -88,8 +100,8 @@ def record_run(contractor: str, counts: dict, *, sink: CaseSink) -> None:
         {
             "contractor": contractor,
             "case_id": f"run#{now}",
-            "record_type": "run",
-            "status": "run_summary",
+            "record_type": record_type,
+            "status": "run_summary" if record_type == "run" else "approval_summary",
             "finished_at": now,
             "created_at": now,
             "updated_at": now,
@@ -176,7 +188,7 @@ def run(
                 missing=list(verdict.missing),
             )
         counts.update({"cases_opened": 0, "drafted": 0, "filed": 0, "vetoed": 0, "asked": 0})
-        record_run(portfolio.contractor, counts, sink=sink)
+        record_run(portfolio.contractor, counts, sink=sink, record_type=_record_type(only, approvals))
         _emit(event="run_finished", **counts)
         return counts
 
@@ -216,7 +228,7 @@ def run(
             ),
         }
     )
-    record_run(portfolio.contractor, counts, sink=sink)
+    record_run(portfolio.contractor, counts, sink=sink, record_type=_record_type(only, approvals))
     _emit(event="run_finished", **counts)
     return counts
 

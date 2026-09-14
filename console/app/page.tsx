@@ -48,7 +48,7 @@ export default async function QueuePage() {
   return (
     <>
       <section className="pt-12">
-        <h1 className="statement max-w-[22ch]">
+        <h1 className="statement max-w-[26ch]">
           {word} {pending.length === 1 ? "decision is" : "decisions are"} yours to make.
         </h1>
         <p className="prose-16 mt-6 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>

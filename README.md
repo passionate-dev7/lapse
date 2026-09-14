@@ -14,11 +14,13 @@ $where=expiration_date in (<the 30 days 2026-08-15..2026-09-13>) AND permit_stat
 
 That number is too big, because the permit feed holds one row per issuance and a permit renewed four times looks like four permits. Collapse the renewal sequences onto the permit they renew and **542** are left. Then join each one to its job filing in a second dataset and ask whether DOB ever signed that job off. **463** had not been signed off or completed.
 
-Four hundred and sixty three permits went past their date last month on jobs that were still open. Another **158** expire in the next seven days.
+Four hundred and sixty three permits went past their date last month on jobs that were still open. Another **142** expire in the next seven days.
 
 A permit does not fail loudly. It expires. Nobody calls. The date passes, the permit lapses, and the next thing that happens is an inspector at the site, a stop work order, and a re-file that costs weeks. The failure mode of this entire domain is silence.
 
 On the violations side, **165,001** DOB violations issued since 2021-09-14 are still categorised ACTIVE. **581** of those carry a sentence a clerk typed into a free text field that says something about disposition, and seven of those say things a keyword list will never understand.
+
+`scripts/measure.py` reports a wider violation count for the portfolio below than a pass does, on purpose. It counts every open violation at every building the contractor holds a permit in, over five years, which is the raw exposure. A pass narrows that twice before deciding anything, to two years and to the buildings where a live permit still sits. The wide number is what is out there. The narrow one is what is actually theirs.
 
 ## What Lapse does
 
@@ -56,7 +58,7 @@ These are why the engine can be quiet without being wrong.
 
 **Job status.** The permit feed cannot tell an expired permit on a live site from an expired permit on a job that closed two years ago. The filings feed can: `job_status` X is SIGNED OFF and U is COMPLETED. A lapsed permit on a closed job is paperwork. A lapsed permit on an open job is unpermitted work. That join is the difference between an alarm and noise.
 
-**Whose obligation it is.** A violation attaches to a building, and for the periodic filing classes the city names the owner, not whoever happens to hold a permit there. Admin Code 28-303.7: "The owner shall file a signed annual report". So a plumbing contractor does not get handed the building's annual boiler filings. On the portfolio below that check alone holds back 87 items that a naive BIN join would have dumped in their queue.
+**Whose obligation it is.** A violation attaches to a building, and for the periodic filing classes the city names the owner, not whoever happens to hold a permit there. 1 RCNY 103-01(d): "The owner shall be responsible for hiring a qualified boiler inspector to conduct inspections and file low pressure boiler annual inspection reports". So a plumbing contractor does not get handed the building's annual boiler filings. On the portfolio below that check alone holds back 87 items that a naive BIN join would have dumped in their queue.
 
 ## The rulebook is data, and every rule carries its source
 
@@ -75,7 +77,13 @@ These are why the engine can be quiet without being wrong.
 }
 ```
 
-`tests/test_rulebook.py` fails the build on any rule whose citation is not an https URL at nyc.gov or the city's code publisher, or whose quote is too short to be a sentence a reader could find on that page. Adding an uncited rule breaks the suite. That is the point.
+Two tests enforce that, and the second one is the one that matters.
+
+`tests/test_rulebook.py` fails the build on any rule whose citation is not an https URL at nyc.gov or the city's code publisher, or whose quote is too short to be a sentence. That is a check on the shape of a citation, and shape is not provenance: a quote can pass all of it and still be two passages from different subdivisions glued together.
+
+So `tests/test_rulebook.py -m live` fetches every cited document and asserts the quote appears in it contiguously. It found four spliced or approximated quotes in this rulebook the first time it ran, including the boiler one, which had "Late filing. An inspection report..." from definition (b)(4) joined to a sentence twenty five lines later in subdivision (e). Both halves were real and the meaning was right, and a judge with a PDF reader would have got zero hits searching for it. All twelve verifiable quotes now pass. The suite also asserts the check can fail, by running the same match against a sentence nobody wrote.
+
+Four rules cite a DOB `.page` URL whose body is rendered by JavaScript, so fetching one returns a shell with none of the quoted text in it. Those are listed as unverifiable rather than quietly counted as passing.
 
 Where the city publishes a cure path but no deadline, `window_days` is `null` and the engine refuses to invent one: the item goes to `DECIDE` with the clock handed back to the contractor. Two published NYC sources genuinely disagree about the permit renewal window, one anchored to issuance and one to expiry. Both are recorded in `meta.known_conflicts` and a test fails if they are deleted. Silently picking one and writing it into an engine is how a wrong number survives a rewrite.
 
@@ -116,7 +124,21 @@ A renewal request written from `job_type=A2, permit_type=PL, work_type=OT` is un
 
 Approval is permission to send something that already passed every check. It is never permission to skip the checking, and `tests/test_veto.py::test_the_hook_cancels_a_filing_that_is_actually_attempted` approves a case first and then asserts the veto still refuses it.
 
-Lapse cannot file anything with the city and never implies otherwise. DOB NOW takes a filing from a licensed person under their own login and nothing else. What Lapse produces is the text and the evidence for that filing, ready to go.
+## Who the response goes to, and why it is not the city
+
+Lapse cannot file anything with DOB, and every message it sends says so in its own body.
+
+DOB NOW accepts a filing from a licensed person signed in under their own login, and for most job types from a registered filing representative. There is no API, no filing address and no delegated path that would let an agent file on somebody's behalf, and there should not be one. An entry that claimed otherwise would be claiming something the city does not permit.
+
+So the end of this pipeline is the desk of the person who can actually file, holding the drafted text, the deadline, the evidence the engine checked and the rule it came from. `data/contractor.json` names that desk, and `agent/dispatch.py` records honestly what happened to each response:
+
+| mode | meaning |
+|---|---|
+| `direct` | the filing desk is a verified SES identity, or the account has left the sandbox, and it was delivered there |
+| `held_for_verification` | the filing desk is not reachable yet, so it went to the operator desk unaltered, with the real intended recipient named in the body. The filing desk has not received it |
+| `simulated` | neither is reachable, so the send was proven against the AWS mailbox simulator. Nothing reached anybody |
+
+`intended` always names the party the response is for, never the address it settled for. It is also never the sender: a message addressed from Lapse to Lapse returns a real MessageId and a real delivery record while reaching nobody but the program that wrote it, which is a failure that looks exactly like success. `_assert_not_a_loop` raises rather than let that be written to a case, and `tests/test_dispatch.py::test_a_response_addressed_to_ourselves_is_refused` proves it.
 
 ## The portfolio
 

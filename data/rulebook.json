@@ -7,7 +7,8 @@
     "known_conflicts": [
       "Permit duration. Admin Code 28-105.8.1 says 'Permits may be issued for a period of up to 2 years unless otherwise limited by law' (as amended by L.L. 2025/048, effective 2026-01-12). The DOB permit renewal page still describes a one year term as one of the earliest-of triggers. Lapse does not compute a term from either: it reads the expiration_date DOB printed on the permit record.",
       "Renewal window anchor. Admin Code 28-105.9.1 allows reinstatement 'within a period of two years from the date of issuance of the original permit'. The DOB permit renewal page says renewals are issued on permits 'that have expired but have activity on the application within a two-year period of the permit expiration date'. Those are different anchor dates. grace_days below is 730 anchored to expiry, following the operational DOB page, and this conflict is recorded rather than hidden."
-    ]
+    ],
+    "provenance": "Every quote below was read out of the document at its citation URL, contiguously, not assembled from passages in different subdivisions. tests/test_rulebook.py -m live fetches each citation and asserts the quote appears in the fetched text, so a spliced or invented quote fails rather than merely looking plausible."
   },
   "permits": [
     {
@@ -68,7 +69,7 @@
       "default_days": null,
       "lapsed_question": "Was the equipment still up, or still in use, after the permit expired? If it came down before the expiry date DOB waives the penalty. If it stayed up, the unpermitted work penalty applies and has to be paid before the renewal.",
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_102-04.pdf",
-      "quote": "Where a permit (other than for temporary construction equipment) expired and no work was performed after the permit's expiration."
+      "quote": "Where a permit (other than for temporary construction equipment) expired and no work was performed after the permit\u2019s expiration."
     },
     {
       "key": "FO",
@@ -80,7 +81,7 @@
       "default_days": null,
       "lapsed_question": "Was any excavation or foundation work done on this site after the permit expired? If nothing was done, DOB waives the unpermitted work penalty and this is a clean renewal. If work continued, the penalty has to be paid before the renewal can be issued at all.",
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_102-04.pdf",
-      "quote": "Except as otherwise provided in this section, payment of the civil penalty is required before: ... (2) Renewal of a permit for work performed after the expiration of a permit when the penalty for such unpermitted work has not been paid."
+      "quote": "Except as otherwise provided in this section, payment of the civil penalty is required before: (1) Issuance of a permit for work in a particular space when work was performed without a permit in such space and the penalty for such unpermitted work has not been paid. (2) Renewal of a permit for work performed after the expiration of a permit when the penalty for such unpermitted work has not been paid."
     },
     {
       "key": "DM",
@@ -92,7 +93,7 @@
       "default_days": null,
       "lapsed_question": "Was any demolition done on this site after the permit expired? If nothing was done, DOB waives the unpermitted work penalty and this is a clean renewal. If work continued, the penalty has to be paid before the renewal can be issued at all.",
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_102-04.pdf",
-      "quote": "Except as otherwise provided in this section, payment of the civil penalty is required before: ... (2) Renewal of a permit for work performed after the expiration of a permit when the penalty for such unpermitted work has not been paid."
+      "quote": "Except as otherwise provided in this section, payment of the civil penalty is required before: (1) Issuance of a permit for work in a particular space when work was performed without a permit in such space and the penalty for such unpermitted work has not been paid. (2) Renewal of a permit for work performed after the expiration of a permit when the penalty for such unpermitted work has not been paid."
     }
   ],
   "violations": [
@@ -105,10 +106,10 @@
       "grace_days": null,
       "default_days": null,
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-01.pdf",
-      "quote": "Late filing. An inspection report or any part of that report filed after the fourteen (14) day filing deadline but in no event later than January 14th of the calendar year immediately following the inspection cycle. Reports filed after such late filing period will be considered expired.",
+      "quote": "Late filing. An inspection report or any part of that report filed after the fourteen (14) day filing deadline but in no event later than January 14th of the calendar year immediately following the inspection cycle.",
       "respondent": "owner",
-      "respondent_citation": "https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-231478",
-      "respondent_quote": "Admin Code 28-303.7: The owner shall file a signed annual report with the commissioner in accordance with the rules of the department within 14 days after the required annual inspection of the boiler has been performed."
+      "respondent_citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-01.pdf",
+      "respondent_quote": "The owner shall be responsible for hiring a qualified boiler inspector to conduct inspections and file low pressure boiler annual inspection reports pursuant to Article 303 of Title 28 of the Administrative Code"
     },
     {
       "key": "HBLVIO",
@@ -119,10 +120,10 @@
       "grace_days": null,
       "default_days": null,
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-05.pdf",
-      "quote": "Late filing. An inspection report or any part of that report filed after the fourteen (14) day filing deadline but in no event later than January 14th of the calendar year immediately following the inspection cycle. Reports filed after such late filing period will be considered expired.",
+      "quote": "Late filing. An inspection report or any part of that report filed after the fourteen (14) day filing deadline but in no event later than January 14th of the calendar year immediately following the inspection cycle",
       "respondent": "owner",
-      "respondent_citation": "https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-231478",
-      "respondent_quote": "Admin Code 28-303.7: The owner shall file a signed annual report with the commissioner in accordance with the rules of the department within 14 days after the required annual inspection of the boiler has been performed."
+      "respondent_citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-05.pdf",
+      "respondent_quote": "The owner shall be responsible for hiring a qualified boiler inspector to conduct inspections and tests and file high pressure boiler annual inspection reports pursuant to Article 303 of Title 28 of the Administrative Code."
     },
     {
       "key": "AEUHAZ1",
@@ -185,8 +186,8 @@
       "citation": "https://www.nyc.gov/site/buildings/safety/resolve-dob-fa%C3%A7ade-violations.page",
       "quote": "A QEWI must submit the outstanding acceptable initial Technical Report Periodic Inspection of Exterior Walls and Appurtenances in DOB NOW: Safety. Pay the late filing penalties owed - $1,000 for every month that an acceptable report is not filed and $5,000 for each year after the end of the sub-cycle filing window period that an acceptable report is not filed.",
       "respondent": "owner",
-      "respondent_citation": "https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-231478",
-      "respondent_quote": "Admin Code 28-302.1: All buildings greater than six stories shall comply with the maintenance requirement of this article."
+      "respondent_citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-04.pdf",
+      "respondent_quote": "The owner of the building is responsible for ensuring that the conditions described in the critical examination report as unsafe are corrected and all actions recommended by the QEWI are completed within this timeframe."
     },
     {
       "key": "RWNRF",
@@ -199,8 +200,8 @@
       "citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-09.pdf",
       "quote": "Filing window. The one-year period during which an acceptable report for a particular retaining wall may be filed with the Department without penalty.",
       "respondent": "owner",
-      "respondent_citation": "https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-231478",
-      "respondent_quote": "Admin Code 28-305.4.2: Owners of retaining walls with a height of ten feet or more and fronting a public right-of-way shall comply with the requirements of this section."
+      "respondent_citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-09.pdf",
+      "respondent_quote": "The owner of the retaining wall is responsible for ensuring that the conditions described in the report of critical examination as safe with repair and/or engineering monitoring are corrected and all actions recommended by the QRWI are completed"
     },
     {
       "key": "P",
@@ -225,8 +226,8 @@
       "citation": "https://www.nyc.gov/site/buildings/safety/resolve-dob-boiler-violations.page",
       "quote": "To remedy a notice of violation for failure to file a periodic boiler inspection report: Provide proof of compliance, such as a copy of the filed inspection report for the applicable cycle year; or Submit to the Department payment of the appropriate civil penalties and filing of a current inspection report in DOB NOW: Safety.",
       "respondent": "owner",
-      "respondent_citation": "https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-231478",
-      "respondent_quote": "Admin Code 28-303.7: The owner shall file a signed annual report with the commissioner in accordance with the rules of the department within 14 days after the required annual inspection of the boiler has been performed."
+      "respondent_citation": "https://www.nyc.gov/assets/buildings/rules/1_RCNY_103-01.pdf",
+      "respondent_quote": "The owner shall be responsible for hiring a qualified boiler inspector to conduct inspections and file low pressure boiler annual inspection reports pursuant to Article 303 of Title 28 of the Administrative Code"
     },
     {
       "key": "UB",

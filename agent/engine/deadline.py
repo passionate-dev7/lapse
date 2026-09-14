@@ -31,6 +31,7 @@ not sent.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -99,8 +100,8 @@ class Deadline:
 class StatusReading:
     """The model's read on whether DOB's own free text says this is still open.
 
-    826 of the 190,574 DOB violations issued since 2020 and still categorised
-    ACTIVE carry a `disposition_comments` that says otherwise: "DELETED BY CAW
+    581 of the 165,001 DOB violations issued in the last five years and still
+    categorised ACTIVE carry a `disposition_comments` that says otherwise: "DELETED BY CAW
     ON 05/23/23 BECAUSE REMOVE FROM FISP 9A", "NOT REQUIRED TO FILE CYCLE 9",
     "S/B AT 215 CHRYSTIE STREET BN#1090397". The structured field says open.
     The sentence a clerk typed says it was deleted, or that it belongs to a
@@ -155,14 +156,27 @@ class Verdict:
 
     @property
     def evidence_id(self) -> str:
-        """Identifies exactly which decision a filed response rests on."""
+        """Identifies exactly which decision a filed response rests on.
+
+        The kind, the identifier, the class and the outcome are not enough on
+        their own. Two passes a month apart against different DOB data can land
+        on the same four values while resting on different facts, and an id
+        that cannot tell those apart is a label, not evidence. So the checks
+        that produced the verdict, their names, their pass or fail, and the
+        values they passed on, are hashed into it. Change what the city
+        published and the id changes with it.
+        """
         klass = self.deadline.klass.value if self.deadline else "none"
-        return f"{self.kind}:{self.item_id}:{klass}:{self.outcome.value}"
+        basis = "|".join(f"{c.name}={c.passed}:{c.detail}" for c in self.checks)
+        if self.deadline:
+            basis += f"|due={self.deadline.due_on}|days={self.deadline.days_remaining}"
+        digest = hashlib.sha256(basis.encode("utf-8")).hexdigest()[:10]
+        return f"{self.kind}:{self.item_id}:{klass}:{self.outcome.value}:{digest}"
 
 
 # DOB clerks write disposition comments in a small number of shapes. These are
 # the ones that appear verbatim in the live dataset, not invented phrasings;
-# `scripts/measure_prose.py` counts how many of the 826 each one catches and how
+# `scripts/measure_prose.py` counts how many of the 581 each one catches and how
 # many it misses, which is the number that justifies reading them with a model.
 _CLOSED_PHRASES = (
     "deleted by",
