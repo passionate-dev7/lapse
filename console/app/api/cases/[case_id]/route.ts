@@ -35,13 +35,31 @@ export async function POST(
   }
 
   if (body.action === "answer") {
-    if (body.answer !== "yes" && body.answer !== "no") {
+    const given = (body.answer ?? "").trim();
+    const isChoice = given === "yes" || given === "no";
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(given);
+    if (!isChoice && !isDate) {
       return NextResponse.json(
         {
-          error: `An answer is "yes" or "no". It was given ${JSON.stringify(body.answer ?? null)}.`,
+          error: `An answer is "yes", "no", or a date as YYYY-MM-DD. It was given ${JSON.stringify(body.answer ?? null)}.`,
         },
         { status: 400 },
       );
+    }
+    // A date in the past is not a plan, it is a deadline that has already gone. The engine
+    // refuses one with a visible failed check; refusing it here as well means the contractor
+    // finds out while the picker is still in front of them.
+    if (isDate) {
+      const parsed = new Date(`${given}T00:00:00Z`);
+      const today = new Date().toISOString().slice(0, 10);
+      if (Number.isNaN(parsed.getTime()) || given.slice(0, 10) < today) {
+        return NextResponse.json(
+          {
+            error: `${given} is not a date Lapse can track from. Pick today or later, because the date you set becomes the deadline it counts down to.`,
+          },
+          { status: 400 },
+        );
+      }
     }
     const target = await getCase(caseId);
     if (!target) {
@@ -70,7 +88,7 @@ export async function POST(
     }
 
     try {
-      await recordAnswer(caseId, body.answer, evidenceId, decisionText(target));
+      await recordAnswer(caseId, given, evidenceId, decisionText(target));
     } catch (error) {
       const err = error as { name?: string; message?: string };
       if (err.name === "ConditionalCheckFailedException") {
@@ -93,7 +111,7 @@ export async function POST(
     // is the only thing that should read an answer, and the copy below says exactly that.
     return NextResponse.json({
       ok: true,
-      message: `Answered ${body.answer}, and that is on the case now. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
+      message: `Answered ${given}, and that is on the case now. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
     });
   }
 

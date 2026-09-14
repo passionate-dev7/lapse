@@ -181,3 +181,148 @@ def test_the_rulebook_refuses_an_uncited_answer_branch():
         assert len(answers[branch]["quote"].split()) >= 12
         assert len(answers[branch]["action"].split()) >= 10
     assert answers["citation"].endswith(".pdf")
+
+
+# --- the date questions ----------------------------------------------------
+# The violation classes where DOB publishes a cure path and no deadline. The
+# engine refuses to invent one, so the contractor names the date and from then
+# on it runs through the same four classes as anything else.
+
+
+def _a_dateless_violation():
+    from agent.engine.deadline import decide_violation
+
+    for violation in PORTFOLIO.violations:
+        verdict = decide_violation(violation, today=TODAY)
+        if verdict.outcome is Outcome.DECIDE and verdict.question_shape == "date":
+            return violation, verdict
+    raise AssertionError("the captured portfolio has no violation awaiting a date")
+
+
+def test_a_dateless_violation_asks_for_a_date_and_offers_no_choices():
+    _, verdict = _a_dateless_violation()
+    assert verdict.question_shape == "date"
+    assert verdict.choices == (), "a date question has no buttons to press"
+    assert verdict.deadline is None, "there is no clock until they set one"
+
+
+def test_a_date_the_contractor_sets_becomes_the_deadline():
+    from agent.engine.deadline import decide_violation
+
+    violation, asked = _a_dateless_violation()
+    chosen = TODAY + timedelta(days=10)
+    resolved = decide_violation(violation, today=TODAY, answer=_answer(asked, chosen.isoformat()))
+
+    assert resolved.outcome is Outcome.FILE
+    assert resolved.deadline is not None
+    assert resolved.deadline.due_on == chosen
+    assert resolved.deadline.days_remaining == 10
+    assert resolved.deadline.klass is Klass.DUE
+    assert resolved.deadline.anchor_name == "the date you set"
+    assert any(c.name.startswith("response_date_set_by[") for c in resolved.checks)
+
+
+def test_a_date_far_enough_out_goes_quiet_again():
+    """The product working, not the product failing.
+
+    A contractor who says they will respond in three months should hear nothing
+    for two of them. Anything else trains them to stop reading.
+    """
+    from agent.engine.deadline import decide_violation
+
+    violation, asked = _a_dateless_violation()
+    far = TODAY + timedelta(days=90)
+    resolved = decide_violation(violation, today=TODAY, answer=_answer(asked, far.isoformat()))
+
+    assert resolved.outcome is Outcome.HOLD
+    assert resolved.deadline.klass is Klass.CLEAR
+    assert resolved.deadline.due_on == far
+
+
+def test_the_date_they_set_escalates_on_its_own():
+    from agent.engine.deadline import decide_violation
+
+    violation, asked = _a_dateless_violation()
+    target = TODAY + timedelta(days=90)
+    answer = _answer(asked, target.isoformat())
+
+    seen = {}
+    for offset in (0, 65, 85, 91):
+        when = TODAY + timedelta(days=offset)
+        # The answer was given against the verdict as of TODAY, so it has to be
+        # re-scoped to each later reading the way the console would.
+        current = decide_violation(violation, today=when)
+        scoped = _answer(current, target.isoformat())
+        verdict = decide_violation(violation, today=when, answer=scoped)
+        seen[offset] = verdict.klass.value if verdict.klass else None
+
+    assert seen[0] == "clear"
+    assert seen[65] == "due"
+    assert seen[85] == "critical"
+    assert seen[91] == "lapsed"
+
+
+def test_a_date_already_past_is_refused_visibly():
+    from agent.engine.deadline import decide_violation
+
+    violation, asked = _a_dateless_violation()
+    verdict = decide_violation(
+        violation, today=TODAY, answer=_answer(asked, (TODAY - timedelta(days=1)).isoformat())
+    )
+    assert verdict.outcome is Outcome.DECIDE
+    assert "response_date_is_a_future_date" in {c.name for c in verdict.failed}
+
+
+def test_something_that_is_not_a_date_is_refused():
+    from agent.engine.deadline import decide_violation
+
+    violation, asked = _a_dateless_violation()
+    for value in ("soon", "next month", "2026-13-45", ""):
+        verdict = decide_violation(violation, today=TODAY, answer=_answer(asked, value))
+        assert verdict.outcome is Outcome.DECIDE, f"{value!r} was accepted as a date"
+
+
+# --- the shape contract the console reads ----------------------------------
+
+
+def test_every_decide_declares_a_shape_and_every_other_outcome_declares_none():
+    """The console renders an affordance off this, so it has to be total."""
+    from agent.run import triage
+
+    for kind, item_id, verdict in triage(PORTFOLIO, today=TODAY):
+        if verdict.outcome is Outcome.DECIDE:
+            assert verdict.question_shape in ("yes_no", "date", "open"), (
+                f"{kind} {item_id} asks a question of no known shape"
+            )
+            if verdict.question_shape == "yes_no":
+                assert len(verdict.choices) == 2
+                assert {c["value"] for c in verdict.choices} == {"yes", "no"}
+                assert all(len(c["label"].split()) >= 4 for c in verdict.choices)
+            else:
+                assert verdict.choices == (), "only a yes or no question has choices"
+        else:
+            assert verdict.question_shape == "none"
+            assert verdict.choices == ()
+
+
+def test_the_choices_are_the_citys_words_not_the_consoles():
+    from agent.run import triage
+
+    answers = lapsed_answers()
+    labels = {answers["no"]["label"], answers["yes"]["label"]}
+    shaped = [
+        v
+        for _, _, v in triage(PORTFOLIO, today=TODAY)
+        if v.question_shape == "yes_no"
+    ]
+    assert shaped, "the captured portfolio should contain a yes or no question"
+    for verdict in shaped:
+        assert {c["label"] for c in verdict.choices} == labels
+
+
+def test_both_question_shapes_actually_occur_in_a_real_portfolio():
+    """Otherwise one branch is untested against anything real."""
+    from agent.run import triage
+
+    shapes = {v.question_shape for _, _, v in triage(PORTFOLIO, today=TODAY)}
+    assert "yes_no" in shapes and "date" in shapes

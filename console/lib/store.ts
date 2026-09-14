@@ -227,7 +227,7 @@ export async function recordApproval(caseId: string): Promise<void> {
  */
 export async function recordAnswer(
   caseId: string,
-  answer: "yes" | "no",
+  answer: string,
   evidenceId: string,
   question: string,
 ) {

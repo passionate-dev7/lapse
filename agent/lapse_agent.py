@@ -81,6 +81,8 @@ def verdict_record(verdict: Verdict) -> dict:
         "artifact": verdict.artifact,
         "citation": verdict.citation,
         "evidence_id": verdict.evidence_id,
+        "question_shape": verdict.question_shape,
+        "choices": list(verdict.choices),
     }
 
 
@@ -407,7 +409,12 @@ def build_agent(
         reading = StatusReading(
             still_open=still_open, confidence=confidence, reason=reason, read_by=model_id
         )
-        verdict = decide_violation(violation, today=ledger.today, reading=reading)
+        verdict = decide_violation(
+            violation,
+            today=ledger.today,
+            reading=reading,
+            answer=ledger.answers.get(violation_id),
+        )
         cid = case_id(contractor, "violation", violation_id)
         ledger.record(cid, verdict)
         log(

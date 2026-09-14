@@ -91,6 +91,8 @@ export interface Verdict {
   artifact: string;
   citation: string;
   evidence_id: string;
+  question_shape?: QuestionShape;
+  choices?: Choice[];
 }
 
 export interface Delivery {
@@ -315,7 +317,8 @@ export function decisionText(c: Case): string {
 }
 
 export interface Answer {
-  value?: "yes" | "no";
+  /** "yes", "no", or an ISO date when the question asked for one. */
+  value?: string;
   answers_evidence_id?: string;
   at?: string;
   by?: string;
@@ -329,24 +332,48 @@ export interface Choice {
 }
 
 /**
- * What the two answers mean, in the contractor's words rather than as bare Yes and No.
+ * What kind of answer the question takes, and what the choices are called.
  *
- * Derived from the question because the record does not carry the labels. That is a heuristic,
- * so it is built to fail safe: a question it does not recognise as answerable with two values
- * gets no buttons at all rather than the wrong two. Of the 39 open questions on the live
- * portfolio, 30 are the lapsed permit question, 1 is a yes or no about a job status, and 8 ask
- * *when* a correction will be filed, which has no yes and no no and must not be given one.
+ * `verdict.question_shape` and `verdict.choices` are authoritative and are used whenever they
+ * are present. They are not present on every row yet: the engine started writing them after
+ * these 39 cases were opened, and a case only gains them when a pass rewrites it. Reading only
+ * the record would therefore take the answer control off every card currently in the queue, so
+ * until the table has turned over, a question with no shape on it is classified from its own
+ * text instead.
+ *
+ * The fallback fails safe. It recognises the lapsed permit question and generic yes or no
+ * openers, and anything else gets `open`, which renders no control at all rather than the wrong
+ * one. Delete `shapeFromText` and the `choices` default once every row carries the fields.
  */
-export function answerChoices(c: Case): Choices | null {
+function shapeFromText(q: string): QuestionShape {
+  if (!q.endsWith("?")) return "open";
+  if (/^when\b/i.test(q)) return "date";
+  if (/^(was|is|are|has|have|did|do|does|will|should|can)\b/i.test(q)) return "yes_no";
+  return "open";
+}
+
+export function answerShape(c: Case): QuestionShape {
+  const declared = c.verdict?.question_shape;
+  if (declared === "yes_no" || declared === "date" || declared === "open") return declared;
+  return shapeFromText(squash(c.question ?? c.verdict?.missing?.[0] ?? ""));
+}
+
+/** The city's framing of the two answers, in the order the rulebook puts them. */
+export function answerChoices(c: Case): Choice[] {
+  const declared = c.verdict?.choices;
+  if (declared?.length) return declared;
+  if (answerShape(c) !== "yes_no") return [];
   const q = squash(c.question ?? c.verdict?.missing?.[0] ?? "");
-  if (!q.endsWith("?")) return null;
   if (/^was any .*\bwork\b.*\bdone\b/i.test(q)) {
-    return { no: "No work was done", yes: "Work continued" };
+    return [
+      { value: "no", label: "No work was done after the permit expired" },
+      { value: "yes", label: "Work continued after the permit expired" },
+    ];
   }
-  if (/^(was|is|are|has|have|did|do|does|will|should|can)\b/i.test(q)) {
-    return { yes: "Yes", no: "No" };
-  }
-  return null;
+  return [
+    { value: "no", label: "No" },
+    { value: "yes", label: "Yes" },
+  ];
 }
 
 /** The answer already on the record, so a card never asks twice without showing the first. */
