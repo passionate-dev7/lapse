@@ -4,6 +4,7 @@ import { ClosedList } from "@/components/ClosedList";
 import { EmptyQueue } from "@/components/EmptyQueue";
 import { FilterBar, NoMatches } from "@/components/FilterBar";
 import { Overview, WorstLine } from "@/components/Overview";
+import { OperatorStrip } from "@/components/OperatorStrip";
 import { ProblemState } from "@/components/ProblemState";
 import { Provenance } from "@/components/Provenance";
 import { QueueCard } from "@/components/QueueCard";
@@ -78,18 +79,15 @@ export default async function QueuePage({
 
   return (
     <>
-      <section className="pt-12">
-        <h1 className="statement max-w-[26ch]">
-          {word} {pending.length === 1 ? "decision is" : "decisions are"} yours to make.
-        </h1>
-        <p className="prose-16 mt-6 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>
-          {runSentence(run, titleCase(CONTRACTOR))}
-        </p>
-        {held ? (
-          <p className="data mt-5 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>
-            {held}
-          </p>
-        ) : null}
+      <OperatorStrip
+        pending={pending.length}
+        worst={shape.worst}
+        run={run}
+        contractor={CONTRACTOR}
+        lapsed={shape.byClass.find((b) => b.klass === "lapsed")?.count ?? 0}
+      />
+
+      <section className="pt-8">
         <WorstLine worst={shape.worst} />
         {filing ? null : (
           <p

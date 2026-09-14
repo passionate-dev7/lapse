@@ -1,53 +1,50 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Lapse: the cyanotype system.
+
+   The work this product watches is filed on drawings. So the console is a
+   drawing: a cyanotype sheet with a printed grid, a ruled border with station
+   ticks, dimension lines instead of bar charts, callout tags instead of badges,
+   and a title block in the bottom right naming the sheet and where it was read.
+
+   Ground is blueprint blue and never lightens. Chalk white is the only action
+   colour. The deadline ramp is the one warm family on the sheet, so a date is
+   the only thing that can glow on a blue page.
+   --------------------------------------------------------------------------- */
+
 :root {
-  --paper: #f3f4f2;
-  --sheet: #fcfcfb;
-  --sheet-2: #eeefec;
-  --ink: #15181a;
-  --ink-2: #454b4d;
-  --ink-3: #6e7573;
-  --rule: #dee0db;
-  --rule-strong: #c4c8c1;
-  --seal: #1b4b3a;
-  --on-seal: #f7faf8;
-  --alarm: #8c1d18;
-  --alarm-wash: rgba(140, 29, 24, 0.06);
+  color-scheme: dark;
 
-  /* The deadline ramp. Ordinal, so it is a hue walk and not four unrelated brand colours.
-     The class word is printed beside every swatch of it, so no reading rests on hue. */
-  --lapsed: #8c1d18;
-  --critical: #9a4409;
-  --due: #6f5a0c;
-  --clear: #6e7573;
+  --paper: #08213a;
+  --sheet: #0c2a47;
+  --sheet-2: #103455;
+  --ink: #e9f2f9;
+  --ink-2: #a7c5dc;
+  --ink-3: #7b9ebb;
+  --rule: #1d4670;
+  --rule-strong: #2f5f8e;
+  --grid: rgba(130, 170, 205, 0.11);
+  --grid-major: rgba(130, 170, 205, 0.2);
 
-  /* Behind a confirmation. It is always a darkening, never a tint of the ink, because in dark
-     mode the ink is the light colour and a scrim mixed from it lifts the page it is covering. */
-  --scrim: rgba(21, 24, 26, 0.42);
-}
+  /* Chalk. The only thing a person can press. */
+  --seal: #e9f2f9;
+  --on-seal: #08213a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #121417;
-    --sheet: #191c20;
-    --sheet-2: #1f2328;
-    --ink: #e8eae7;
-    --ink-2: #a8aeac;
-    --ink-3: #7c8481;
-    --rule: #2a2e33;
-    --rule-strong: #3a3f45;
-    --seal: #5fa98c;
-    --on-seal: #0e1512;
-    --alarm: #e08078;
-    --alarm-wash: rgba(224, 128, 120, 0.08);
+  /* The deadline ramp, ordinal. The class word is printed beside every use of
+     it, so nothing on this page depends on hue alone. */
+  --lapsed: #ff6f61;
+  --critical: #ffa24a;
+  --due: #ffd85e;
+  --clear: #7b9ebb;
 
-    --lapsed: #e08078;
-    --critical: #e09a5e;
-    --due: #cdb35f;
-    --clear: #7c8481;
+  --alarm: #ff6f61;
+  --alarm-wash: rgba(255, 111, 97, 0.1);
+  --flag: #ffc53d;
 
-    --scrim: rgba(0, 0, 0, 0.62);
-  }
+  --scrim: rgba(3, 14, 26, 0.72);
+
+  --t-statement: clamp(32px, 2.6vw + 18px, 52px);
 }
 
 @theme inline {
@@ -62,7 +59,9 @@
   --color-seal: var(--seal);
   --color-on-seal: var(--on-seal);
   --color-alarm: var(--alarm);
-  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --color-flag: var(--flag);
+  --font-sans: var(--font-barlow), "Helvetica Neue", Arial, sans-serif;
+  --font-cond: var(--font-barlow-cond), "Helvetica Neue Condensed", Arial, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -72,13 +71,24 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* The printed grid. 24px minor, 120px major, exactly as a drafting sheet is
+     ruled, and it scrolls with the page because the page is the sheet. */
   body {
     background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size:
+      120px 120px,
+      120px 120px,
+      24px 24px,
+      24px 24px;
     color: var(--ink);
-    font-family: var(--font-newsreader), Georgia, "Times New Roman", serif;
-    font-size: 16px;
-    line-height: 1.6;
-    font-variation-settings: "opsz" 16;
+    font-family: var(--font-sans);
+    font-size: 15.5px;
+    line-height: 1.55;
   }
 
   ::selection {
@@ -92,108 +102,117 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--seal);
+    outline: 2px solid var(--flag);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 1px;
   }
 }
 
 @layer components {
+  /* Type roles ------------------------------------------------------------ */
+
   .label {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 10.5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
     font-weight: 500;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     line-height: 1;
     color: var(--ink-3);
   }
 
   .micro {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 11.5px;
-    line-height: 1.45;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
     font-variant-numeric: tabular-nums;
     color: var(--ink-3);
   }
 
   .data {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
     line-height: 1.55;
     font-variant-numeric: tabular-nums;
   }
 
+  /* Headlines are condensed capitals, the way a sheet titles a drawing. */
   .statement {
-    font-size: clamp(30px, 2.2vw + 18px, 42px);
-    line-height: 1.1;
+    font-family: var(--font-cond);
+    font-size: var(--t-statement);
+    line-height: 0.98;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    text-transform: uppercase;
     text-wrap: balance;
-    font-weight: 400;
-    letter-spacing: -0.012em;
-    font-variation-settings: "opsz" 36;
   }
 
   .record-title {
-    font-size: clamp(21px, 0.8vw + 17px, 25px);
-    line-height: 1.22;
+    font-family: var(--font-cond);
+    font-size: clamp(22px, 0.9vw + 18px, 28px);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     text-wrap: balance;
-    font-weight: 400;
-    letter-spacing: -0.008em;
-    font-variation-settings: "opsz" 28;
   }
 
   .prose-16 {
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 15.5px;
+    line-height: 1.58;
   }
 
-  /* The deadline, which is the variable this whole product is about. It was set at 13px under a
-     25px headline that said the same generic thing on every card, so the constant was twice the
-     size of the variable. It is now the largest thing on a card. */
+  /* The deadline. The largest thing on a card, in the mono, because it is a
+     measured quantity and this sheet measures things. */
   .anchor {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: clamp(30px, 1.6vw + 22px, 42px);
-    line-height: 1.05;
+    font-family: var(--font-mono);
+    font-size: clamp(30px, 1.8vw + 21px, 44px);
+    line-height: 1;
     font-weight: 500;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
   }
 
-  /* The decision under the place: the model's question about this specific item. */
   .decision {
-    font-size: clamp(17px, 0.4vw + 15.5px, 19px);
-    line-height: 1.42;
+    font-size: clamp(16.5px, 0.4vw + 15px, 18.5px);
+    line-height: 1.45;
   }
 
   .cite {
-    color: var(--seal);
+    color: var(--ink-2);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
-    text-decoration-color: color-mix(in srgb, var(--seal) 40%, transparent);
-    transition: text-decoration-color 120ms ease-out;
+    text-decoration-color: var(--rule-strong);
+    transition: color 120ms ease-out, text-decoration-color 120ms ease-out;
   }
 
   .cite:hover {
-    text-decoration-color: var(--seal);
+    color: var(--flag);
+    text-decoration-color: var(--flag);
   }
+
+  /* Buttons -------------------------------------------------------------- */
 
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     white-space: nowrap;
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.09em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     padding: 11px 18px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid transparent;
     cursor: pointer;
-    transition: background-color 120ms ease-out, border-color 120ms ease-out,
-      transform 80ms ease-out, opacity 120ms ease-out;
+    transition:
+      background-color 120ms ease-out,
+      border-color 120ms ease-out,
+      transform 80ms ease-out,
+      color 120ms ease-out;
   }
 
   .btn:active:not(:disabled) {
@@ -201,7 +220,6 @@
   }
 
   .btn:disabled {
-    opacity: 0.42;
     cursor: not-allowed;
   }
 
@@ -211,16 +229,13 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.12);
+    background: #fff;
   }
 
-  /* A filled button at 42% opacity reads as a half-painted box rather than as a control that
-     is deliberately off. Disabled drops the fill entirely and keeps the shape. */
   .btn-primary:disabled {
     background: transparent;
     border-color: var(--rule-strong);
     color: var(--ink-3);
-    opacity: 1;
   }
 
   .btn-secondary {
@@ -230,46 +245,50 @@
   }
 
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--ink-3);
+    border-color: var(--ink-2);
     background: var(--sheet-2);
   }
 
-  /* One queue record. A sheet of a single document, separated by a rule and not by a gap. */
+  .btn-secondary:disabled {
+    color: var(--ink-3);
+    border-color: var(--rule);
+  }
+
+  /* One decision, drawn as a detail on the sheet: ruled box, class colour on
+     the left edge, nothing floating. */
   .record {
     display: block;
-    border-bottom: 1px solid var(--rule);
-    padding: 30px 0 34px;
+    background: color-mix(in srgb, var(--sheet) 88%, transparent);
+    border: 1px solid var(--rule);
+    padding: 22px 24px 26px;
   }
 
-  /* The drafted filing, quoted whole. It is the thing being approved, so it is set as a block
-     of evidence with a rule down its left edge, not as a paraphrase in a tooltip. */
   .draft {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
     line-height: 1.65;
     white-space: pre-wrap;
-    background: var(--sheet-2);
-    border-left: 2px solid var(--rule-strong);
-    border-radius: 0 4px 4px 0;
-    padding: 18px 20px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--flag);
+    padding: 16px 18px;
     color: var(--ink-2);
     overflow-wrap: anywhere;
   }
 
-  /* A filter. It is a control, not a badge, so it carries a border and a pressed state and
-     never sits loose over a card as a label for it. */
+  /* A filter, drawn as a station tag on a dimension line. */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     line-height: 1;
     white-space: nowrap;
     padding: 8px 11px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid var(--rule-strong);
     color: var(--ink-2);
     background: transparent;
@@ -277,7 +296,7 @@
   }
 
   .chip:hover {
-    border-color: var(--ink-3);
+    border-color: var(--ink-2);
     background: var(--sheet-2);
     color: var(--ink);
   }
@@ -289,41 +308,271 @@
   }
 
   .chip[data-on]:hover {
-    filter: brightness(1.12);
+    background: #fff;
     color: var(--on-seal);
   }
 
-  /* The selection bar. It sits on the bottom edge because the thing it counts is above it and
-     scrolling away from a selection you made is how a person loses one. */
   .tray {
     position: sticky;
     bottom: 0;
     z-index: 20;
     border-top: 1px solid var(--rule-strong);
     background: var(--sheet);
-    box-shadow: 0 -12px 28px -22px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 -14px 30px -20px rgba(0, 0, 0, 0.7);
   }
 
   .sheet-panel {
     background: var(--sheet);
-    border: 1px solid var(--rule-strong);
-    border-radius: 4px;
+    border: 1px solid var(--rule);
+    border-radius: 0;
   }
 
-  /* The selection control on a record. Native, because a checkbox a person cannot recognise on
-     sight is not a checkbox. Only the accent is ours. */
   .pick {
-    accent-color: var(--seal);
+    accent-color: var(--flag);
     width: 16px;
     height: 16px;
     cursor: pointer;
   }
 }
 
+/* ---------------------------------------------------------------------------
+   The sheet: a ruled border with station ticks along the top, the way a drawing
+   is trimmed. The content sits inside the trim.
+   --------------------------------------------------------------------------- */
+
+.drawing {
+  position: relative;
+  border-left: 1px solid var(--rule-strong);
+  border-right: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  background: linear-gradient(to bottom, rgba(8, 33, 58, 0.55), rgba(8, 33, 58, 0.82));
+}
+
+.drawing::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 7px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--rule-strong) 0 1px,
+    transparent 1px 48px
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Title bar: sheet name on the left, portfolio on the right, as a drawing's
+   header strip.
+   --------------------------------------------------------------------------- */
+
+.title-bar {
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--sheet);
+}
+
+.title-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  min-height: 66px;
+  padding-block: 12px;
+}
+
+.wordmark {
+  font-family: var(--font-cond);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sheet-no {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--rule-strong);
+  padding: 5px 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------------------
+   The strip at the top of the sheet: who, when, how much, and the one item
+   already costing money.
+   --------------------------------------------------------------------------- */
+
+.strip {
+  padding: 34px 0 26px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.strip-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.strip-role {
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+}
+
+.strip-live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+}
+
+/* Not animated. A still mark is a fact; a pulsing one is decoration. */
+.strip-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--flag);
+  display: inline-block;
+}
+
+.strip-contract {
+  font-family: var(--font-cond);
+  font-size: var(--t-statement);
+  line-height: 0.98;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  margin-top: 18px;
+  max-width: 24ch;
+}
+
+.strip-cost {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 14px;
+  padding-left: 11px;
+  border-left: 3px solid var(--lapsed);
+  color: var(--lapsed);
+}
+
+.strip-machine {
+  margin-top: 12px;
+  color: var(--ink-3);
+  max-width: 66ch;
+}
+
+/* ---------------------------------------------------------------------------
+   Dimension line. What used to be a stacked bar chart. A drawing measures a
+   run by drawing it to scale with a tick at each end, so the shape of the
+   queue is measured the same way.
+   --------------------------------------------------------------------------- */
+
+.dim {
+  display: flex;
+  align-items: stretch;
+  height: 34px;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.dim-seg {
+  position: relative;
+  display: block;
+  border-right: 1px solid var(--paper);
+  transition: opacity 140ms ease-out;
+}
+
+.dim-seg:last-child {
+  border-right: 0;
+}
+
+.dim-seg:hover {
+  opacity: 0.72;
+}
+
+/* Each segment carries its own end tick, so the run reads as measured rather
+   than as a painted bar. */
+.dim-seg::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  right: -1px;
+  width: 1px;
+  background: var(--ink-2);
+}
+
+.dim-seg:last-child::after {
+  right: 0;
+}
+
+/* The class ledger, as a schedule of quantities. */
+.qty-row {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 16px;
+  padding: 14px 10px;
+  border-top: 1px solid var(--rule);
+  transition: background-color 140ms ease-out;
+}
+
+.qty-row:hover {
+  background: var(--sheet-2);
+}
+
+.qty-count {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------------------
+   Title block, bottom right of the sheet, like every drawing ever issued. The
+   provenance line lives in it: table, region, partition, time of read.
+   --------------------------------------------------------------------------- */
+
+.title-block {
+  margin-top: 56px;
+  margin-left: auto;
+  max-width: 560px;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+}
+
+.title-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.title-block-body {
+  padding: 12px 14px 14px;
+}
+
+/* Motion: one entrance on the report, feedback everywhere else. */
 @keyframes report-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -332,7 +581,7 @@
 }
 
 .report-in {
-  animation: report-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: report-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -342,5 +591,17 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .strip-live {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .title-block {
+    max-width: none;
   }
 }

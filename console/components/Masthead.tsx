@@ -3,25 +3,26 @@ import Link from "next/link";
 import { titleCase } from "@/lib/format";
 
 /**
- * Whose portfolio this is, on every screen. A deadline console that does not name the business
- * it is counting for is one browser tab away from being read against the wrong permits.
+ * The header strip of the sheet. Whose portfolio this is, on every screen: a
+ * deadline console that does not name the business it counts for is one browser
+ * tab away from being read against the wrong permits.
  */
 export function Masthead({ contractor }: { contractor: string }) {
   return (
-    <header className="border-b border-rule">
-      <div className="mx-auto flex min-h-[68px] w-full max-w-[1080px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-4">
-        <Link href="/" className="flex items-baseline gap-3">
-          <span
-            className="text-[21px] leading-none"
-            style={{ fontVariationSettings: '"opsz" 24', letterSpacing: "-0.01em" }}
-          >
-            Lapse
-          </span>
-          <span className="label hidden sm:inline">DOB deadline desk</span>
+    <header className="title-bar">
+      <div className="title-bar-inner mx-auto w-full max-w-[1120px] px-5 sm:px-8">
+        <Link href="/" className="flex items-baseline gap-4">
+          <span className="wordmark">Lapse</span>
+          <span className="label hidden sm:inline">DOB deadline sheet</span>
         </Link>
-        <span className="micro" style={{ color: "var(--ink-2)" }}>
-          {titleCase(contractor)}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="sheet-no">
+            <span style={{ color: "var(--flag)" }}>NYC</span> Open Data
+          </span>
+          <span className="data" style={{ color: "var(--ink)" }}>
+            {titleCase(contractor)}
+          </span>
+        </div>
       </div>
     </header>
   );

@@ -38,7 +38,7 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
   const dataset = tailOf(c.item.source);
 
   return (
-    <article className="record">
+    <article className="record" style={{ borderLeft: `3px solid ${tone}` }}>
       <div className="grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_212px]">
         <div className="lg:order-2 lg:border-l lg:border-rule lg:pl-6 lg:pt-1">
           {/* The anchor is a number. When the engine could not date the item there is no number

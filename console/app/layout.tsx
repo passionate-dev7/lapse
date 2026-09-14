@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { Barlow, Barlow_Condensed, IBM_Plex_Mono } from "next/font/google";
 
 import { Masthead } from "@/components/Masthead";
 import { CONTRACTOR } from "@/lib/store";
 
 import "./globals.css";
 
-const newsreader = Newsreader({
+const barlow = Barlow({
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
-  variable: "--font-newsreader",
-  axes: ["opsz"],
+  variable: "--font-barlow",
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  variable: "--font-barlow-cond",
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -31,10 +38,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${plexMono.variable}`}>
+    <html
+      lang="en"
+      className={`${barlow.variable} ${barlowCondensed.variable} ${plexMono.variable}`}
+    >
       <body>
         <Masthead contractor={CONTRACTOR} />
-        <main className="mx-auto w-full max-w-[1080px] px-6 pb-24">{children}</main>
+        <main className="drawing mx-auto w-full max-w-[1120px] px-5 pb-24 sm:px-8">
+          {children}
+        </main>
       </body>
     </html>
   );
