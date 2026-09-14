@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Lapse",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1280,
+      670
+    ],
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "components": [
+    {
+      "id": "src",
+      "type": "external",
+      "label": "NYC DOB open data",
+      "sublabel": "permits, job filings, violations",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "three Socrata datasets, no key"
+    },
+    {
+      "id": "extract",
+      "type": "backend",
+      "label": "Three way join",
+      "sublabel": "the permit is the bridge",
+      "pos": [
+        370,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "one business, one obligation list"
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "Deadline engine",
+      "sublabel": "FILE, DECIDE, HOLD",
+      "pos": [
+        700,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "no prompt reaches it"
+    },
+    {
+      "id": "person",
+      "type": "external",
+      "label": "The contractor",
+      "sublabel": "a permit does not fail loudly",
+      "pos": [
+        1030,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "finds out when it is late"
+    },
+    {
+      "id": "model",
+      "type": "backend",
+      "label": "Strands agent",
+      "sublabel": "reads DOB prose, drafts the response",
+      "pos": [
+        700,
+        290
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "decides nothing"
+    }
+  ],
+  "connections": [
+    {
+      "id": "fetch",
+      "from": "src",
+      "to": "extract",
+      "label": "filings, as prose",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "named",
+      "from": "person",
+      "to": "extract",
+      "label": "one business name",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "id": "constraints",
+      "from": "extract",
+      "to": "engine",
+      "label": "dated obligations",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "identity",
+      "from": "model",
+      "to": "engine",
+      "label": "disposition read, nothing else",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "variant": "emphasis"
+    }
+  ]
+}

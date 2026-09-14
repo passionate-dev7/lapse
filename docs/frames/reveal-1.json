@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Lapse",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1280,
+      670
+    ],
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "components": [
+    {
+      "id": "src",
+      "type": "external",
+      "label": "NYC DOB open data",
+      "sublabel": "permits, job filings, violations",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "three Socrata datasets, no key"
+    },
+    {
+      "id": "person",
+      "type": "external",
+      "label": "The contractor",
+      "sublabel": "a permit does not fail loudly",
+      "pos": [
+        1030,
+        60
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "tag": "finds out when it is late"
+    }
+  ],
+  "connections": [
+    {
+      "id": "silence",
+      "from": "src",
+      "to": "person",
+      "label": "the expiry is never announced",
+      "variant": "dashed"
+    }
+  ]
+}
