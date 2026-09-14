@@ -6,14 +6,7 @@ import path from "node:path";
 import { DynamoDBClient, QueryCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
-import {
-  ANSWER_NO,
-  ANSWER_YES,
-  recordKind,
-  type Case,
-  type Run,
-  type TimelineEntry,
-} from "./cases";
+import { recordKind, type Case, type Run, type TimelineEntry } from "./cases";
 
 
 export const TABLE = process.env.LAPSE_TABLE ?? "lapse-cases";
@@ -178,6 +171,16 @@ export async function getCase(caseId: string): Promise<Case | null> {
   return cases.find((c) => c.case_id === caseId) ?? null;
 }
 
+/**
+ * The cadence as this deployment is configured, or nothing. The console's key reaches DynamoDB
+ * and one Lambda, not EventBridge, so the schedule cannot be read from the system that holds it
+ * and is carried here as configuration instead. It is printed with that caveat attached rather
+ * than dressed up as an observation, and the run table underneath is the observation.
+ */
+export function schedule(): string | null {
+  return process.env.LAPSE_SCHEDULE?.trim() || null;
+}
+
 export function filingFunction(): string | null {
   const name = process.env.LAPSE_AGENT_FUNCTION?.trim();
   if (!name || !hasCredentials()) return null;
@@ -222,11 +225,16 @@ export async function recordApproval(caseId: string): Promise<void> {
  * the product asked for is now on the record, in a timeline event whose name carries the value,
  * so the next pass can act on it. The card says exactly that and claims nothing more.
  */
-export async function recordAnswer(caseId: string, answer: "yes" | "no", question: string) {
+export async function recordAnswer(
+  caseId: string,
+  answer: "yes" | "no",
+  evidenceId: string,
+  question: string,
+) {
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const entry: TimelineEntry = {
     at: now,
-    event: answer === "yes" ? ANSWER_YES : ANSWER_NO,
+    event: "answered",
     detail: question
       ? `The contractor answered ${answer} in the console to: ${question}`
       : `The contractor answered ${answer} in the console.`,
@@ -236,10 +244,19 @@ export async function recordAnswer(caseId: string, answer: "yes" | "no", questio
       TableName: TABLE,
       Key: marshall({ contractor: CONTRACTOR, case_id: caseId }),
       UpdateExpression:
-        "SET timeline = list_append(if_not_exists(timeline, :empty), :events), updated_at = :now",
+        "SET #answer = :answer, timeline = list_append(if_not_exists(timeline, :empty), :events), updated_at = :now",
       ConditionExpression: "#status = :expected",
-      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeNames: { "#status": "status", "#answer": "answer" },
       ExpressionAttributeValues: marshall({
+        ":answer": {
+          value: answer,
+          // Copied verbatim off the verdict being answered. The engine uses it to tell whether
+          // DOB's record moved between the question going out and the answer coming back, and
+          // refuses a stale answer rather than acting on it.
+          answers_evidence_id: evidenceId,
+          at: now,
+          by: "the contractor",
+        },
         ":empty": [] as TimelineEntry[],
         ":events": [entry],
         ":now": now,
@@ -247,6 +264,29 @@ export async function recordAnswer(caseId: string, answer: "yes" | "no", questio
       }),
     }),
   );
+}
+
+/**
+ * Resolving an answered question. Same function and the same server side `only`, with no
+ * `approve` key, so the pass re-reads the item with the answer on the record and turns the
+ * DECIDE into a FILE with a draft. It never files: approving that draft is still a separate
+ * press by a person.
+ */
+export async function handOffForResolve(itemId: string): Promise<void> {
+  const name = filingFunction();
+  if (!name) throw new Error("No agent function is configured on this deployment.");
+  const { InvokeCommand, LambdaClient } = await import("@aws-sdk/client-lambda");
+  const lambda = new LambdaClient({ region: REGION, credentials: credentials() });
+  const out = await lambda.send(
+    new InvokeCommand({
+      FunctionName: name,
+      InvocationType: "Event",
+      Payload: Buffer.from(JSON.stringify({ live: true, with_model: true, only: itemId })),
+    }),
+  );
+  if (out.StatusCode !== 202) {
+    throw new Error(`Lambda ${name} answered ${out.StatusCode} instead of accepting the pass.`);
+  }
 }
 
 /**

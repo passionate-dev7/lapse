@@ -49,7 +49,7 @@ DynamoDB table `lapse-cases`, PK `contractor` (S), SK `case_id` (S), PAY_PER_REQ
     "action": "Renew the permit before it expires",
     "artifact": "DOB NOW: Build permit renewal",
     "citation": "https://www.nyc.gov/...",
-    "evidence_id": "permit:3765466:critical:FILE"
+    "evidence_id": "permit:3765466:critical:FILE:96948d33e3"
   },
 
   "draft_text": "Full text of the renewal request or the correction response, or null",
@@ -82,6 +82,12 @@ Same table, same partition. `case_id` is `run#<iso timestamp>` and
 `record_type` is `run`. It exists so the console can say how many items a pass
 covered instead of counting the leftovers it can see.
 
+A pass aimed at one case, which is what an Approve or an answer triggers, writes
+`record_type: "approval"` and `status: "approval_summary"` instead. It screens
+the same portfolio but it opens one case, so filing it as a sweep would make the
+console report a sweep that opened one thing. The console reads the newest
+`run` record for its headline and ignores `approval` records.
+
 ```json
 {
   "contractor": "VARSITY PLBG AND HTG INC",
@@ -90,13 +96,16 @@ covered instead of counting the leftovers it can see.
   "status": "run_summary",
   "finished_at": "2026-09-14T18:04:00+00:00",
   "permits_screened": 140,
-  "violations_screened": 98,
-  "items_screened": 238,
-  "held": 201,
-  "cases_opened": 37,
-  "drafted": 22,
-  "awaiting_approval": 22,
-  "needs_decision": 15,
+  "violations_screened": 95,
+  "items_screened": 235,
+  "held": 179,
+  "engine_file": 16,
+  "engine_decide": 40,
+  "answers_applied": 1,
+  "cases_opened": 56,
+  "drafted": 16,
+  "awaiting_approval": 16,
+  "needs_decision": 40,
   "filed": 0,
   "vetoed": 0,
   "source": "live NYC Open Data",
