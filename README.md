@@ -191,6 +191,14 @@ A renewal request written from `job_type=A2, permit_type=PL, work_type=OT` is un
 
 Approval is permission to send something that already passed every check. It is never permission to skip the checking, and `tests/test_veto.py::test_the_hook_cancels_a_filing_that_is_actually_attempted` approves a case first and then asserts the veto still refuses it.
 
+It is not theoretical. On the last full pass over this portfolio the veto fired once, unrehearsed, for a reason nobody staged:
+
+```
+{"event": "veto", "detail": "case f28dda4b5b2584dd was already filed; it will not be sent twice"}
+```
+
+The model reached a case an earlier pass had already sent, drafted it again, and tried to file it. Without the hook the contractor gets the same renewal instruction twice from their own agent. `vetoed: 1` on that run's summary record is that event, counted.
+
 ## Who the response goes to, and why it is not the city
 
 Lapse cannot file anything with DOB, and every message it sends says so in its own body.

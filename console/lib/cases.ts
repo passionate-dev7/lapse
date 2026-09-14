@@ -345,31 +345,27 @@ export interface Choice {
  * openers, and anything else gets `open`, which renders no control at all rather than the wrong
  * one. Delete `shapeFromText` and the `choices` default once every row carries the fields.
  */
-function shapeFromText(q: string): QuestionShape {
-  if (!q.endsWith("?")) return "open";
-  if (/^when\b/i.test(q)) return "date";
-  if (/^(was|is|are|has|have|did|do|does|will|should|can)\b/i.test(q)) return "yes_no";
+export function answerShape(c: Case): QuestionShape {
+  const declared = c.verdict?.question_shape;
+  if (declared === "yes_no" || declared === "date") return declared;
+  // Anything else, including a record written before the engine started stamping the shape,
+  // degrades to no control rather than to a guessed one.
   return "open";
 }
 
-export function answerShape(c: Case): QuestionShape {
-  const declared = c.verdict?.question_shape;
-  if (declared === "yes_no" || declared === "date" || declared === "open") return declared;
-  return shapeFromText(squash(c.question ?? c.verdict?.missing?.[0] ?? ""));
-}
-
-/** The city's framing of the two answers, in the order the rulebook puts them. */
+/**
+ * The city's framing of each answer, in the order the rulebook puts them, read straight off the
+ * record. `choices` is empty for every shape except `yes_no`, so a card cannot render a control
+ * for a question that has no set of answers.
+ *
+ * The generic pair below is a floor, not a guess: it only applies if a record says `yes_no` and
+ * then carries no labels, which the contract does not allow. Yes and No are true for any
+ * question that is genuinely yes or no, so the floor cannot state something false.
+ */
 export function answerChoices(c: Case): Choice[] {
   const declared = c.verdict?.choices;
   if (declared?.length) return declared;
   if (answerShape(c) !== "yes_no") return [];
-  const q = squash(c.question ?? c.verdict?.missing?.[0] ?? "");
-  if (/^was any .*\bwork\b.*\bdone\b/i.test(q)) {
-    return [
-      { value: "no", label: "No work was done after the permit expired" },
-      { value: "yes", label: "Work continued after the permit expired" },
-    ];
-  }
   return [
     { value: "no", label: "No" },
     { value: "yes", label: "Yes" },
