@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { RUN_PREFIX } from "@/lib/cases";
-import { filingFunction, handOffForFiling, recordApproval } from "@/lib/store";
+import { filingFunction, getCase, handOffForFiling, recordApproval } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,35 @@ export async function POST(
     );
   }
 
+  // The DOB item id is read back off the record rather than taken from the request, because it
+  // is what the filing function narrows its pass to. A caller who could name it could aim the
+  // agent at a permit that is not theirs.
+  const item = await getCase(caseId);
+  if (!item) {
+    return NextResponse.json(
+      { error: `No case ${caseId} under this contractor. Nothing was written.` },
+      { status: 404 },
+    );
+  }
+  if (item.status !== "awaiting_approval") {
+    return NextResponse.json(
+      {
+        error: `This case is ${item.status}, not awaiting approval, so there is nothing here to approve. Reload to see where it got to.`,
+      },
+      { status: 409 },
+    );
+  }
+  const itemId = item.item?.item_id?.trim();
+  if (!itemId) {
+    return NextResponse.json(
+      {
+        error:
+          "This case carries no DOB item id, so the filing function could not be pointed at a single item and a pass was not started.",
+      },
+      { status: 422 },
+    );
+  }
+
   try {
     await recordApproval(caseId);
   } catch (error) {
@@ -54,7 +83,7 @@ export async function POST(
   }
 
   try {
-    await handOffForFiling(caseId);
+    await handOffForFiling(caseId, itemId);
   } catch (error) {
     return NextResponse.json(
       {

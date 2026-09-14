@@ -148,10 +148,23 @@ export function isRun(raw: { case_id?: string; record_type?: string }): boolean 
   return raw.record_type === "run" || (raw.case_id ?? "").startsWith(RUN_PREFIX);
 }
 
-/** ISO timestamps sort lexicographically, so the highest `run#` key is the newest pass. */
+/**
+ * The newest pass, by the field that means "when this pass ended" rather than by the sort key
+ * that happens to embed it. Compared with `<`, not `localeCompare`: collation is locale aware
+ * and these keys are dense in `#`, `-`, `:` and `+`, which collation is entitled to weigh
+ * differently from their code points. It agrees with byte order on the keys in the table today,
+ * which is exactly what makes it the wrong comparator to leave in place.
+ */
+function runKey(run: Run): string {
+  return run.finished_at || run.case_id.slice(RUN_PREFIX.length) || run.case_id;
+}
+
 export function latestRun(runs: Run[]): Run | null {
-  if (!runs.length) return null;
-  return [...runs].sort((a, b) => a.case_id.localeCompare(b.case_id))[runs.length - 1];
+  let latest: Run | null = null;
+  for (const run of runs) {
+    if (!latest || runKey(run) > runKey(latest)) latest = run;
+  }
+  return latest;
 }
 
 /** The two statuses that cost the contractor attention. Everything else is history. */
