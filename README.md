@@ -143,6 +143,25 @@ FAIL answer_still_applies: answered 'no' on 2026-09-14 against a different readi
      this permit; DOB's record has moved since, so the question stands again
 ```
 
+### The questions where the city publishes no clock at all
+
+Eight of the items in this portfolio are violation classes where DOB publishes the cure path and no deadline in days. The engine will not invent one, so the question it asks is the date itself, and the contractor sets their own clock.
+
+From then on it is a deadline like any other. One violation, a date ninety days out:
+
+```
+day +0    HOLD    clear       quiet, because nothing is due
+day +65   FILE    due
+day +85   FILE    critical
+day +95   FILE    lapsed
+```
+
+The card goes silent the moment they answer and comes back on its own as the date approaches. That is the product in one behaviour: they decide once, and then they are left alone until it matters.
+
+A date that was already in the past when they set it is refused with a visible check. A date they set in good faith that has since gone by is not sent back to the same question, because that would lose the commitment they made. It becomes `lapsed`, which is the alarm.
+
+Every `DECIDE` declares a `question_shape` of `yes_no`, `date` or `open`, and a `yes_no` carries its two choices in the city's own words, so the console reads the affordance off the record rather than pattern-matching the prose of a question.
+
 An answer supplies one fact no dataset holds. It is not a veto override: on a permit whose job DOB signed off, the structured checks fail long before the answer is ever consulted, and `tests/test_answers.py::test_an_answer_cannot_resurrect_a_permit_the_checks_closed` is what keeps that true.
 
 ## What the model is actually for
