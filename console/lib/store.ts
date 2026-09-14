@@ -56,11 +56,22 @@ function db(): DynamoDBClient {
 /**
  * Cases, run summaries and everything else share the partition key. They are told apart here
  * and nowhere else, so no screen can render an approval summary as a case or as a pass.
+ *
+ * An approval summary is kept and filed with the passes rather than dropped. It is a pass: it
+ * ran the agent, it screened the corpus, and it filed something, and the run history is the one
+ * page whose whole job is to show what ran. `isSweep` is what keeps it out of the headline,
+ * where quoting it would report a portfolio sweep that opened a single case. Dropping the row
+ * here instead would mean an approval the contractor made themselves could never appear in the
+ * record of what this agent has done.
  */
 function split(rows: Record<string, unknown>[]): { cases: Case[]; runs: Run[] } {
   const cases: Case[] = [];
   const runs: Run[] = [];
   for (const row of rows) {
+    if (row.record_type === "approval") {
+      runs.push(row as unknown as Run);
+      continue;
+    }
     const kind = recordKind(row as { case_id?: string; record_type?: string });
     if (kind === "other") continue;
     if (kind === "run") {
