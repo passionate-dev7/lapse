@@ -42,6 +42,7 @@ export default async function QueuePage() {
 
   const word = WORDS[pending.length] ?? String(pending.length);
   const held = heldSentence(run);
+  const filing = filingFunction();
 
   return (
     <>
@@ -57,11 +58,21 @@ export default async function QueuePage() {
             {held}
           </p>
         ) : null}
+        {filing ? null : (
+          <p
+            className="data mt-6 max-w-[62ch] border-l-2 pl-4"
+            style={{ borderColor: "var(--rule-strong)", color: "var(--ink-2)" }}
+          >
+            Approve is off on this deployment. LAPSE_AGENT_FUNCTION names the function that
+            actually files a response, and it is unset here, so the drafts below can be read and
+            checked but not sent. Said once rather than on every card.
+          </p>
+        )}
       </section>
 
       <section className="mt-10 border-t border-rule">
         {pending.map((item) => (
-          <QueueCard key={item.case_id} item={item} filingEnabled={Boolean(filingFunction())} />
+          <QueueCard key={item.case_id} item={item} filingEnabled={Boolean(filing)} />
         ))}
       </section>
 

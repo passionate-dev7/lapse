@@ -188,6 +188,15 @@
     filter: brightness(1.12);
   }
 
+  /* A filled button at 42% opacity reads as a half-painted box rather than as a control that
+     is deliberately off. Disabled drops the fill entirely and keeps the shape. */
+  .btn-primary:disabled {
+    background: transparent;
+    border-color: var(--rule-strong);
+    color: var(--ink-3);
+    opacity: 1;
+  }
+
   .btn-secondary {
     border-color: var(--rule-strong);
     color: var(--ink);

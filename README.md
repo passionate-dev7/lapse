@@ -145,6 +145,17 @@ Every one of the 179 held names the check that held it:
 
 Those 99 that are not simply "not due yet" are the ones a naive BIN-and-expiry join would have put in front of a person. All five boroughs, 118 addresses.
 
+Then the full pass, `.venv/bin/python -m agent.run --live --dynamo`, with the model on every one of the 56 the engine did not settle:
+
+```
+{"event": "run_finished", "permits_screened": 140, "violations_screened": 95,
+ "items_screened": 235, "held": 179, "engine_file": 16, "engine_decide": 40,
+ "considered": 56, "cases_opened": 56, "drafted": 16, "awaiting_approval": 16,
+ "needs_decision": 40, "filed": 0, "vetoed": 0, "source": "live NYC Open Data"}
+```
+
+`filed: 0` is the correct outcome of an unattended run. Sixteen responses are written and waiting for one person to press one button. Nothing left the building on its own.
+
 ## Running it
 
 ```bash

@@ -1,7 +1,15 @@
 import { ApproveAction } from "@/components/ApproveAction";
 import { ChecksTable } from "@/components/ChecksTable";
 import { headline, itemLabel, klassTone, type Case } from "@/lib/cases";
-import { daysPhrase, hostOf, longDate, squash, tailOf, titleCase } from "@/lib/format";
+import {
+  daysPhrase,
+  hostOf,
+  longDate,
+  splitStatement,
+  squash,
+  tailOf,
+  titleCase,
+} from "@/lib/format";
 
 /**
  * One decision. The rail on the right is the deadline and nothing else, so the page has a spine
@@ -22,10 +30,11 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
   );
 
   const dataset = tailOf(c.item.source);
+  const [statement, rest] = splitStatement(headline(c));
 
   return (
     <article className="record">
-      <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[1fr_186px]">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[1fr_212px]">
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 lg:order-2 lg:flex-col lg:items-end lg:gap-y-2 lg:pt-2 lg:text-right">
           <span className="label" style={{ color: tone }}>
             {v.klass ?? "no class"}
@@ -38,9 +47,14 @@ export function QueueCard({ item: c, filingEnabled }: { item: Case; filingEnable
         </div>
 
         <div className="min-w-0 lg:order-1">
-          <h2 className="record-title max-w-[44ch]">{headline(c)}</h2>
+          <h2 className="record-title max-w-[44ch]">{statement}</h2>
+          {rest ? (
+            <p className="prose-16 mt-3 max-w-[64ch]" style={{ color: "var(--ink-2)" }}>
+              {rest}
+            </p>
+          ) : null}
 
-          <p className="data mt-3" style={{ color: "var(--ink)" }}>
+          <p className="data mt-4" style={{ color: "var(--ink)" }}>
             <span style={{ textTransform: "capitalize" }}>{c.item.kind ?? c.kind}</span>
             {address ? ` at ${address}` : ""}
           </p>

@@ -25,8 +25,12 @@ export function ChecksTable({ checks }: { checks: Check[] }) {
             check.passed
               ? undefined
               : {
+                  // The rule hangs into the gutter so the failed row's columns stay on the
+                  // same grid as the passed ones. A row that also shifts sideways reads as a
+                  // layout bug rather than as the one thing that did not hold.
                   borderLeft: "2px solid var(--alarm)",
-                  paddingLeft: "13px",
+                  marginLeft: "-16px",
+                  paddingLeft: "14px",
                   background: "var(--alarm-wash)",
                 }
           }

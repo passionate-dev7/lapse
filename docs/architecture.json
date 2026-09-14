@@ -6,8 +6,8 @@
     "output": "architecture.html",
     "quality_profile": "showcase",
     "viewBox": [
-      1440,
-      860
+      1370,
+      676
     ],
     "repository": {
       "url": "https://github.com/kamalbuilds/lapse",
@@ -62,11 +62,11 @@
       "tag": "live, no key",
       "pos": [
         40,
-        110
+        72
       ],
       "size": [
-        240,
-        62
+        225,
+        58
       ],
       "sources": [
         {
@@ -83,11 +83,11 @@
       "sublabel": "ic3t-wcy2, is the job still open",
       "pos": [
         40,
-        202
+        164
       ],
       "size": [
-        240,
-        62
+        225,
+        58
       ],
       "sources": [
         {
@@ -104,11 +104,11 @@
       "sublabel": "3h2n-5cm9, what is outstanding",
       "pos": [
         40,
-        294
+        256
       ],
       "size": [
-        240,
-        62
+        225,
+        58
       ],
       "sources": [
         {
@@ -125,12 +125,12 @@
       "sublabel": "the permit is the bridge",
       "tag": "one business, one obligation list",
       "pos": [
-        350,
-        202
+        400,
+        160
       ],
       "size": [
-        240,
-        70
+        225,
+        66
       ],
       "sources": [
         {
@@ -152,12 +152,12 @@
       "sublabel": "data/rulebook.json",
       "tag": "a URL and a sentence per rule",
       "pos": [
-        670,
-        62
+        760,
+        38
       ],
       "size": [
-        250,
-        62
+        240,
+        58
       ],
       "sources": [
         {
@@ -179,12 +179,12 @@
       "sublabel": "FILE, DECIDE, HOLD",
       "tag": "no prompt reaches it",
       "pos": [
-        670,
-        202
+        760,
+        160
       ],
       "size": [
-        250,
-        70
+        240,
+        66
       ],
       "sources": [
         {
@@ -206,12 +206,12 @@
       "sublabel": "SES from lapse@getava.xyz",
       "tag": "DOB NOW still needs a licensed login",
       "pos": [
-        1160,
-        212
+        1105,
+        165
       ],
       "size": [
-        240,
-        64
+        225,
+        58
       ],
       "sources": [
         {
@@ -228,11 +228,11 @@
       "sublabel": "lapse-daily, 11:00 UTC",
       "pos": [
         40,
-        440
+        363
       ],
       "size": [
-        240,
-        64
+        225,
+        60
       ],
       "sources": [
         {
@@ -248,12 +248,12 @@
       "label": "AWS Lambda",
       "sublabel": "lapse-run",
       "pos": [
-        350,
-        440
+        400,
+        360
       ],
       "size": [
-        240,
-        70
+        225,
+        66
       ],
       "sources": [
         {
@@ -275,12 +275,12 @@
       "sublabel": "seven tools, reads DOB prose",
       "tag": "Anthropic direct, Bedrock blocked here",
       "pos": [
-        670,
-        440
+        760,
+        360
       ],
       "size": [
-        250,
-        70
+        240,
+        66
       ],
       "sources": [
         {
@@ -302,12 +302,12 @@
       "sublabel": "cancels file_response",
       "tag": "BeforeToolCallEvent",
       "pos": [
-        990,
-        440
+        1105,
+        360
       ],
       "size": [
-        240,
-        70
+        225,
+        66
       ],
       "sources": [
         {
@@ -328,12 +328,12 @@
       "label": "The contractor",
       "sublabel": "interrupted once per item",
       "pos": [
-        1160,
-        560
+        1105,
+        470
       ],
       "size": [
-        240,
-        62
+        225,
+        58
       ]
     },
     {
@@ -342,12 +342,12 @@
       "label": "S3 evidence",
       "sublabel": "lapse-evidence-079415246611",
       "pos": [
-        350,
-        700
+        400,
+        566
       ],
       "size": [
-        240,
-        66
+        225,
+        62
       ],
       "sources": [
         {
@@ -364,12 +364,12 @@
       "sublabel": "lapse-cases, lapse-permits",
       "tag": "case id is a hash, so a rerun is one case",
       "pos": [
-        670,
-        700
+        760,
+        566
       ],
       "size": [
-        250,
-        66
+        240,
+        62
       ],
       "sources": [
         {
@@ -390,12 +390,12 @@
       "label": "Console on Vercel",
       "sublabel": "a decision queue, not a dashboard",
       "pos": [
-        990,
-        700
+        1105,
+        566
       ],
       "size": [
-        240,
-        66
+        225,
+        62
       ],
       "sources": [
         {
@@ -428,39 +428,41 @@
       "id": "permits-in",
       "from": "permits",
       "to": "portfolio",
-      "label": "keyed by permittee"
+      "label": "by permittee"
     },
     {
       "id": "jobs-in",
       "from": "jobs",
       "to": "portfolio",
-      "label": "keyed by job number"
+      "label": "by job number",
+      "labelDy": 13
     },
     {
       "id": "violations-in",
       "from": "violations",
       "to": "portfolio",
-      "label": "keyed by BIN"
+      "label": "by BIN"
     },
     {
       "id": "joined",
       "from": "portfolio",
       "to": "engine",
-      "label": "every item, joined"
+      "label": "the joined list"
     },
     {
       "id": "cited",
       "from": "rulebook",
       "to": "engine",
-      "label": "the window, and its citation",
+      "label": "with its citation",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "labelDy": 34
     },
     {
       "id": "tick",
       "from": "scheduler",
       "to": "lambda",
-      "label": "daily at 11:00 UTC"
+      "label": "daily, 11:00 UTC"
     },
     {
       "id": "one-pass",
@@ -477,15 +479,19 @@
       "to": "agent",
       "label": "only the survivors",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "labelDx": -90,
+      "labelDy": 55
     },
     {
       "id": "reading",
       "from": "agent",
       "to": "engine",
-      "label": "one disposition read",
+      "label": "disposition read",
       "fromSide": "top",
-      "toSide": "bottom"
+      "toSide": "bottom",
+      "labelDx": 90,
+      "labelDy": -40
     },
     {
       "id": "ruling",
@@ -506,10 +512,11 @@
       "id": "sent",
       "from": "hook",
       "to": "filing_desk",
-      "label": "the draft and its evidence",
+      "label": "draft plus evidence",
       "variant": "emphasis",
       "fromSide": "top",
-      "toSide": "bottom"
+      "toSide": "bottom",
+      "labelDy": -60
     },
     {
       "id": "cases",
@@ -517,22 +524,24 @@
       "to": "dynamo",
       "label": "cases",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "labelDy": 60
     },
     {
       "id": "pass-written",
       "from": "lambda",
       "to": "s3",
-      "label": "the pass, written down",
+      "label": "the run, written down",
       "variant": "dashed",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "labelDy": 60
     },
     {
       "id": "delta",
       "from": "lambda",
       "to": "dynamo",
-      "label": "what moved since yesterday"
+      "label": "what moved overnight"
     },
     {
       "id": "read",

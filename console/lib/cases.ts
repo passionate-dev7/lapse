@@ -251,7 +251,7 @@ export function runSentence(run: Run | null, contractor: string): string {
     : "";
   const opened = run.cases_opened
     ? ` ${plural(run.cases_opened, "case")} came out of it.`
-    : " Nothing came out of it.";
+    : " That pass opened no new case.";
   return `The last pass read ${corpus} filed under ${contractor} against ${run.source}.${held}${opened}`;
 }
 

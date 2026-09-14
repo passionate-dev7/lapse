@@ -70,6 +70,19 @@ export function sentenceCase(text: string): string {
   return `${clean.charAt(0).toUpperCase()}${clean.slice(1)}`;
 }
 
+/**
+ * Real questions off the engine run to six lines of serif, which stops being a statement and
+ * starts being a paragraph set too large. The first sentence carries the decision; the rest is
+ * the reason. Nothing is dropped, it is only set at the size it deserves.
+ */
+export function splitStatement(text: string): [string, string] {
+  const clean = squash(text);
+  if (clean.length <= 170) return [clean, ""];
+  const stop = clean.search(/[.?!]\s/);
+  if (stop < 60 || stop > clean.length - 20) return [clean, ""];
+  return [clean.slice(0, stop + 1), clean.slice(stop + 1).trim()];
+}
+
 export function hostOf(url: string | null | undefined): string {
   if (!url) return "";
   try {
