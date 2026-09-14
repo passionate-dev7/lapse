@@ -13,16 +13,24 @@ H=1080
 
 # beat | visual sources, comma separated, split evenly across the beat
 MANIFEST="
-01_city|casts/01_city.cast
-02_silence|cards/02_silence.png
-03_pass|casts/03_pass.cast
-04_holds|casts/03_pass.cast
-05_prose|casts/05_prose.cast
-06_question|casts/06_question.cast
-07_draft|casts/07_draft.cast
-08_veto|casts/08_veto.cast
-09_unattended|casts/09_unattended.cast
-10_close|cards/10_close.png
+01_notice|sources/01_notice_head.png
+02_expiry|sources/02_notice_expired.png
+03_price|sources/03_facade.png
+04_meter|sources/04_press_head.png,sources/05_press_quote.png
+06_city|casts/01_city.cast
+07_absence|../docs/frames/reveal-1.png
+08_read|../docs/frames/reveal-2.png
+09_engine|../docs/frames/reveal-3.png
+10_pass|casts/03_pass.cast
+11_holds|casts/03_pass.cast
+12_prose|casts/05_prose.cast
+13_question|casts/06_question.cast
+14_console|../console/shots/queue-1440.png
+15_draft|casts/07_draft.cast
+16_gate|../docs/frames/reveal-4.png
+17_veto|casts/08_veto.cast
+18_unattended|casts/09_unattended.cast
+19_close|cards/10_close.png
 "
 
 render_cast() {
