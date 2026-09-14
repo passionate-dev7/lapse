@@ -232,9 +232,10 @@ if [ -z "${ANTHROPIC_KEY}" ]; then
   echo "no ANTHROPIC_API_KEY in ${REPO_ROOT}/.env; place it there and re-run" >&2
   exit 1
 fi
-# The table names live in agent/store.py as constants and the bucket in
-# agent/evidence.py, so they are deliberately not repeated here as environment
-# variables: two places to change one name is how they drift apart.
+# The table names live in agent/store.py as constants and the bucket name is
+# built in infra/lambda_handler.py:_write_evidence, so they are deliberately not
+# repeated here as environment variables: two places to change one name is how
+# they drift apart.
 ANTHROPIC_KEY="${ANTHROPIC_KEY}" CONTRACTOR="${CONTRACTOR}" SENDER="${SENDER}" \
   python3 -c '
 import json, os
