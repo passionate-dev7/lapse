@@ -50,6 +50,16 @@ and one of four deadline classes, on a single axis of days remaining: `lapsed`, 
 
 `HOLD` is the common case and the product depends on it. A contractor told about everything in their portfolio reads nothing, and then the one that mattered goes past too. Every `HOLD` is a notification that was correctly not sent, and there is a test that fails if the engine ever starts surfacing more than 40 percent of a portfolio.
 
+### Where the Strands work actually is
+
+The obvious question about an agent built this way is: if a deadline engine makes every decision, what is the agent for? The answer is not the model's judgment. It is the control structure, and it is three specific things in the Strands SDK:
+
+1. **`FilingVeto`**, a `BeforeToolCallEvent` `HookProvider` that sets `event.cancel_tool` before `file_response` runs. Not a check inside the tool, which a model that never calls the tool would never reach, and not a prompt instruction, which a model can talk itself out of. The refusal happens in the framework, above the tool body.
+2. **`approval_gate`**, a `HumanInTheLoop` vended intervention with `allowed_tools=["*", "!file_response"]`. The negation is the point: in Strands a negated tool cannot be trusted for the session, so no amount of prior approval makes the send automatic. An if-statement does not buy that property.
+3. **A seam the model cannot cross.** `read_disposition` accepts the model's read of DOB's prose and returns the verdict computed from it. The model learns the outcome; it never chooses it. A `StatusReading` below 0.7 confidence is ignored entirely, and a reading can only ever close an item, never argue a closed one back open.
+
+Neutering the hook by one line turns the suite red, which is the test that separates a guardrail from a decoration. That proof is below.
+
 ## The three checks that make it credible
 
 These are why the engine can be quiet without being wrong.
@@ -241,7 +251,9 @@ The blind spot worth stating: the fast suite proves the hook refuses. It does no
 
 ## Architecture
 
-Strands Agents SDK, model-agnostic, running on Anthropic `claude-sonnet-4-5-20250929`. Bedrock and AgentCore are not available on this AWS account, which is an AWS India (AISPL) account where every model in every region returns `Operation not allowed`. Strands being model-agnostic is what made that a configuration line rather than a dead end, and the rest of AWS carries the load:
+Strands Agents SDK, running on Anthropic `claude-sonnet-4-5-20250929`.
+
+**On Bedrock, plainly:** this is an AWS India (AISPL) account, where Bedrock is not offered. Every model in every region returns `Operation not allowed`, for the account administrator too. Strands is model-agnostic by design, so that was one configuration line rather than a dead end, and it is worth noticing that this is exactly the portability the SDK exists to give you. Everything else in the stack is AWS and all of it is deployed and exercised:
 
 - **Lambda** `lapse-run`, one unattended pass
 - **EventBridge Scheduler** `lapse-daily`
