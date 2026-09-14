@@ -55,6 +55,13 @@ DynamoDB table `lapse-cases`, PK `contractor` (S), SK `case_id` (S), PAY_PER_REQ
   "draft_text": "Full text of the renewal request or the correction response, or null",
   "question": "The one question put to the contractor, or null",
 
+  "answer": {
+    "value": "yes | no",
+    "answers_evidence_id": "permit:3992811:lapsed:DECIDE:96948d33e3",
+    "at": "2026-09-14T13:13:29+00:00",
+    "by": "the contractor"
+  },
+
   "timeline": [{"at": "2026-09-14T18:02:11+00:00", "event": "opened", "detail": "verdict FILE"}],
   "delivery": {
     "mode": "direct | held_for_verification | simulated",
@@ -107,6 +114,24 @@ covered instead of counting the leftovers it can see.
 | `needs_decision` | verdict DECIDE, one question is waiting | the question, no send button |
 | `filed` | the response left the building, `delivery.message_id` is set | the delivery record, no button |
 | `dismissed` | a later pass found the item closed | archived |
+
+## The answer
+
+`answer` is written by the console when a person settles a `needs_decision`
+card, and it is read by the next pass, which resolves the DECIDE into a FILE
+and drafts the response.
+
+`answers_evidence_id` is a copy of `verdict.evidence_id` taken at the moment
+the question was answered. An evidence id hashes the checks the verdict rested
+on, so if DOB's record moved in between, the answer was given about something
+else. The engine refuses it and adds a failed `answer_still_applies` check
+rather than applying it silently, and the console renders that like any other
+failed check, because a contractor whose answer was superseded needs to see
+that rather than wonder why nothing happened.
+
+An answer supplies one fact no dataset holds. It cannot override a structured
+check: on a permit whose job DOB signed off, the checks fail long before the
+answer is consulted.
 
 `delivery.intended` always names the party the response was for. `delivery.to`
 is where it actually went, which is the same address in `direct` mode and a

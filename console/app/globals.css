@@ -249,6 +249,69 @@
     color: var(--ink-2);
     overflow-wrap: anywhere;
   }
+
+  /* A filter. It is a control, not a badge, so it carries a border and a pressed state and
+     never sits loose over a card as a label for it. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    white-space: nowrap;
+    padding: 8px 11px;
+    border-radius: 4px;
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-2);
+    background: transparent;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+  }
+
+  .chip:hover {
+    border-color: var(--ink-3);
+    background: var(--sheet-2);
+    color: var(--ink);
+  }
+
+  .chip[data-on] {
+    background: var(--seal);
+    border-color: var(--seal);
+    color: var(--on-seal);
+  }
+
+  .chip[data-on]:hover {
+    filter: brightness(1.12);
+    color: var(--on-seal);
+  }
+
+  /* The selection bar. It sits on the bottom edge because the thing it counts is above it and
+     scrolling away from a selection you made is how a person loses one. */
+  .tray {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    border-top: 1px solid var(--rule-strong);
+    background: var(--sheet);
+    box-shadow: 0 -12px 28px -22px rgba(0, 0, 0, 0.55);
+  }
+
+  .sheet-panel {
+    background: var(--sheet);
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+  }
+
+  /* The selection control on a record. Native, because a checkbox a person cannot recognise on
+     sight is not a checkbox. Only the accent is ours. */
+  .pick {
+    accent-color: var(--seal);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
 }
 
 @keyframes report-in {
