@@ -55,6 +55,10 @@ export function QueueList({
   const [sending, setSending] = useState(false);
   const [current, setCurrent] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
+  // The batch as it stood when Send was pressed. A finished run clears the selection, and the
+  // report of what happened has to survive that: a list that empties itself at the moment a
+  // person wants to read it is how an approval becomes something they have to take on trust.
+  const [batch, setBatch] = useState<Approvable[]>([]);
 
   const byId = useMemo(() => new Map(approvable.map((a) => [a.case_id, a])), [approvable]);
   const selected = useMemo(
@@ -70,10 +74,12 @@ export function QueueList({
   const everyOne = allShown.length > 0 && allShown.every((id) => picked.includes(id));
 
   async function send() {
+    const batched = selected;
+    setBatch(batched);
     setSending(true);
     setOutcomes([]);
     const done: Outcome[] = [];
-    for (const item of selected) {
+    for (const item of batched) {
       setCurrent(item.case_id);
       try {
         const res = await fetch(`/api/cases/${encodeURIComponent(item.case_id)}`, {
@@ -168,6 +174,7 @@ export function QueueList({
                 disabled={!filingEnabled}
                 onClick={() => {
                   setOutcomes([]);
+                  setBatch([]);
                   setOpen(true);
                 }}
                 title={
@@ -185,7 +192,7 @@ export function QueueList({
 
       {open ? (
         <Confirm
-          selected={selected}
+          selected={outcomes.length || sending ? batch : selected}
           destination={destination}
           sending={sending}
           current={current}
@@ -225,7 +232,7 @@ function Confirm({
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto px-4 py-8 sm:px-6 sm:py-12"
-      style={{ background: "color-mix(in srgb, var(--ink) 38%, transparent)" }}
+      style={{ background: "var(--scrim)" }}
       role="dialog"
       aria-modal="true"
       aria-label="Confirm the batch"

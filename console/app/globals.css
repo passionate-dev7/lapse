@@ -20,6 +20,10 @@
   --critical: #9a4409;
   --due: #6f5a0c;
   --clear: #6e7573;
+
+  /* Behind a confirmation. It is always a darkening, never a tint of the ink, because in dark
+     mode the ink is the light colour and a scrim mixed from it lifts the page it is covering. */
+  --scrim: rgba(21, 24, 26, 0.42);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +45,8 @@
     --critical: #e09a5e;
     --due: #cdb35f;
     --clear: #7c8481;
+
+    --scrim: rgba(0, 0, 0, 0.62);
   }
 }
 
