@@ -128,7 +128,7 @@ export function NoMatches({ filter, total }: { filter: Filter; total: number }) 
         {`No open decision matches that, out of the ${plural(total, "on the queue", "on the queue")}.`}
       </h2>
       <p className="prose-16 mt-4 max-w-[62ch]" style={{ color: "var(--ink-2)" }}>
-        {`This is a filter finding nothing, not a clear portfolio. ${sentence(filter, 0, total)}`}
+        {`This is a filter finding nothing, not a clear portfolio. The queue behind it still holds ${plural(total, "open decision")}. Take one of the filters off, or clear them all.`}
       </p>
       <p className="mt-6">
         <Link className="btn btn-secondary" href={toQuery({ ...filter, ...CLEARED })}>

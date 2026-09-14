@@ -5,7 +5,6 @@ import {
   filingFunction,
   getCase,
   handOffForFiling,
-  handOffForResolve,
   recordAnswer,
   recordApproval,
 } from "@/lib/store";
@@ -86,29 +85,15 @@ export async function POST(
       return NextResponse.json({ error: err.message ?? "The write failed." }, { status: 502 });
     }
 
-    const resolveId = target.item?.item_id?.trim();
-    if (!filingFunction() || !resolveId) {
-      return NextResponse.json({
-        ok: true,
-        resolving: false,
-        message: `Answered ${body.answer}, and that is on the case. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
-      });
-    }
-
-    try {
-      await handOffForResolve(resolveId);
-    } catch (error) {
-      return NextResponse.json({
-        ok: true,
-        resolving: false,
-        message: `Answered ${body.answer}, and that is on the case. A pass could not be started now (${(error as Error).message}), so the next scheduled one picks it up.`,
-      });
-    }
-
+    // Deliberately no pass is started here. Kicking one off immediately after the write races
+    // it: the pass rewrites the case record without the `answer` map, so the answer is erased
+    // and the question is asked again. Proved on case 0ac6feaa03d5cb2b, where two console
+    // answers at 13:22:11 and 13:22:27 were followed by two `asked` events at 13:22:31 and
+    // 13:22:45 and no `answer` left on the row. Until the pass preserves it, the scheduled run
+    // is the only thing that should read an answer, and the copy below says exactly that.
     return NextResponse.json({
       ok: true,
-      resolving: true,
-      message: `Answered ${body.answer}. A pass is re-reading this permit with your answer on it and will write the draft. Nothing has been sent, and the draft still needs your approval.`,
+      message: `Answered ${body.answer}, and that is on the case now. The next scheduled pass reads it and writes the draft. Nothing has been sent and this one is not handled yet.`,
     });
   }
 

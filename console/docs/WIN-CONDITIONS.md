@@ -9,12 +9,14 @@ set is the live project gallery for the event, and the entry is judged on a rubr
 Design is one weighted component. The console is the only judge-facing surface, so it carries
 that component alone.
 
-Bar to beat: a judge opening https://lapse-console.vercel.app reaches a real decision, sees the
-named checks with the values the engine actually compared, and clicks through to the nyc.gov rule
-the deadline was read from, without scrolling past the first card. Concretely: first card above
-the fold carries the class, the due date, the day count, the address, the DOB identifiers, the
-pass and fail checks, and the citation link. Verified in `deepsurge` at 1440 and 390 with zero
-console errors.
+Bar to beat: a judge opening https://lapse-console.vercel.app sees the shape of the portfolio
+before they see a single card, can narrow it to one class or one borough and send that URL to
+somebody, and can read what the agent did unattended. Concretely, above the fold: the counts for
+lapsed, critical, due and unclassed; the worst item named with its day count and address; the
+borough split; and a filter row whose state is in the query string. Below it, every card still
+carries the class, the due date, the day count, the address, the DOB identifiers, the pass and
+fail checks, and the citation link, and `/runs` carries one row per screening pass with what it
+screened, held and opened. Verified in `deepsurge` at 1440 and 390 with zero console errors.
 
 Asset we will own: the cited rulebook, `data/rulebook.json`. Every deadline the engine acts on
 carries the nyc.gov URL it was read from and the sentence it was read out of, and
