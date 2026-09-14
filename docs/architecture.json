@@ -1,0 +1,589 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Lapse",
+    "output": "architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1440,
+      860
+    ],
+    "repository": {
+      "url": "https://github.com/kamalbuilds/lapse",
+      "revision": "401b793e87949f9b31d077de5f49edba7173b389"
+    },
+    "views": [
+      {
+        "id": "unattended",
+        "label": "The pass nobody watches",
+        "focus": [
+          "permits",
+          "jobs",
+          "violations",
+          "portfolio",
+          "engine",
+          "scheduler",
+          "lambda",
+          "dynamo"
+        ],
+        "note": "Once a day at 07:00 in New York. Three DOB datasets in, one join, and arithmetic that ends in HOLD for most of the portfolio."
+      },
+      {
+        "id": "the-seam",
+        "label": "Where the model stops",
+        "focus": [
+          "rulebook",
+          "engine",
+          "agent",
+          "hook"
+        ],
+        "note": "The engine decides. The model reads DOB's prose and writes the draft. The hook cancels a filing the ledger cannot justify."
+      },
+      {
+        "id": "the-one-interruption",
+        "label": "The one interruption",
+        "focus": [
+          "agent",
+          "dynamo",
+          "console",
+          "contractor"
+        ],
+        "note": "A DECIDE verdict and a draft waiting for approval are the only two things that ever reach a person."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "permits",
+      "type": "external",
+      "label": "DOB Permit Issuance",
+      "sublabel": "ipu4-2q9a, what expires",
+      "tag": "live, no key",
+      "pos": [
+        40,
+        110
+      ],
+      "size": [
+        240,
+        62
+      ],
+      "sources": [
+        {
+          "path": "agent/feeds/permits.py",
+          "line": 27,
+          "label": "DOB_PERMITS"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "type": "external",
+      "label": "DOB Job Application Filings",
+      "sublabel": "ic3t-wcy2, is the job still open",
+      "pos": [
+        40,
+        202
+      ],
+      "size": [
+        240,
+        62
+      ],
+      "sources": [
+        {
+          "path": "agent/feeds/jobs.py",
+          "line": 38,
+          "label": "DOB_JOBS"
+        }
+      ]
+    },
+    {
+      "id": "violations",
+      "type": "external",
+      "label": "DOB Violations",
+      "sublabel": "3h2n-5cm9, what is outstanding",
+      "pos": [
+        40,
+        294
+      ],
+      "size": [
+        240,
+        62
+      ],
+      "sources": [
+        {
+          "path": "agent/feeds/violations.py",
+          "line": 32,
+          "label": "DOB_VIOLATIONS"
+        }
+      ]
+    },
+    {
+      "id": "portfolio",
+      "type": "backend",
+      "label": "Three way join",
+      "sublabel": "the permit is the bridge",
+      "tag": "one business, one obligation list",
+      "pos": [
+        350,
+        202
+      ],
+      "size": [
+        240,
+        70
+      ],
+      "sources": [
+        {
+          "path": "agent/engine/portfolio.py",
+          "line": 110,
+          "label": "fetch"
+        },
+        {
+          "path": "agent/engine/portfolio.py",
+          "line": 65,
+          "label": "live_bins"
+        }
+      ]
+    },
+    {
+      "id": "rulebook",
+      "type": "database",
+      "label": "Cited rulebook",
+      "sublabel": "data/rulebook.json",
+      "tag": "a URL and a sentence per rule",
+      "pos": [
+        670,
+        62
+      ],
+      "size": [
+        250,
+        62
+      ],
+      "sources": [
+        {
+          "path": "agent/engine/rulebook.py",
+          "line": 107,
+          "label": "load"
+        },
+        {
+          "path": "tests/test_rulebook.py",
+          "line": 1,
+          "label": "fails the suite on an uncited rule"
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "Deadline engine",
+      "sublabel": "FILE, DECIDE, HOLD",
+      "tag": "no prompt reaches it",
+      "pos": [
+        670,
+        202
+      ],
+      "size": [
+        250,
+        70
+      ],
+      "sources": [
+        {
+          "path": "agent/engine/deadline.py",
+          "line": 285,
+          "label": "decide_permit"
+        },
+        {
+          "path": "agent/engine/deadline.py",
+          "line": 486,
+          "label": "decide_violation"
+        }
+      ]
+    },
+    {
+      "id": "filing_desk",
+      "type": "external",
+      "label": "The filing desk",
+      "sublabel": "SES from lapse@getava.xyz",
+      "tag": "DOB NOW still needs a licensed login",
+      "pos": [
+        1160,
+        212
+      ],
+      "size": [
+        240,
+        64
+      ],
+      "sources": [
+        {
+          "path": "agent/dispatch.py",
+          "line": 180,
+          "label": "send_response"
+        }
+      ]
+    },
+    {
+      "id": "scheduler",
+      "type": "cloud",
+      "label": "EventBridge Scheduler",
+      "sublabel": "lapse-daily, 11:00 UTC",
+      "pos": [
+        40,
+        440
+      ],
+      "size": [
+        240,
+        64
+      ],
+      "sources": [
+        {
+          "path": "infra/deploy.sh",
+          "line": 309,
+          "label": "create-schedule"
+        }
+      ]
+    },
+    {
+      "id": "lambda",
+      "type": "cloud",
+      "label": "AWS Lambda",
+      "sublabel": "lapse-run",
+      "pos": [
+        350,
+        440
+      ],
+      "size": [
+        240,
+        70
+      ],
+      "sources": [
+        {
+          "path": "infra/lambda_handler.py",
+          "line": 130,
+          "label": "run_pass"
+        },
+        {
+          "path": "agent/run.py",
+          "line": 102,
+          "label": "run"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Strands agent",
+      "sublabel": "seven tools, reads DOB prose",
+      "tag": "Anthropic direct, Bedrock blocked here",
+      "pos": [
+        670,
+        440
+      ],
+      "size": [
+        250,
+        70
+      ],
+      "sources": [
+        {
+          "path": "agent/lapse_agent.py",
+          "line": 286,
+          "label": "build_agent"
+        },
+        {
+          "path": "agent/lapse_agent.py",
+          "line": 164,
+          "label": "approval_gate"
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "type": "security",
+      "label": "FilingVeto",
+      "sublabel": "cancels file_response",
+      "tag": "BeforeToolCallEvent",
+      "pos": [
+        990,
+        440
+      ],
+      "size": [
+        240,
+        70
+      ],
+      "sources": [
+        {
+          "path": "agent/lapse_agent.py",
+          "line": 144,
+          "label": "FilingVeto"
+        },
+        {
+          "path": "tests/test_veto.py",
+          "line": 1,
+          "label": "goes red when the hook is removed"
+        }
+      ]
+    },
+    {
+      "id": "contractor",
+      "type": "external",
+      "label": "The contractor",
+      "sublabel": "interrupted once per item",
+      "pos": [
+        1160,
+        560
+      ],
+      "size": [
+        240,
+        62
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3 evidence",
+      "sublabel": "lapse-evidence-079415246611",
+      "pos": [
+        350,
+        700
+      ],
+      "size": [
+        240,
+        66
+      ],
+      "sources": [
+        {
+          "path": "infra/lambda_handler.py",
+          "line": 115,
+          "label": "_write_evidence"
+        }
+      ]
+    },
+    {
+      "id": "dynamo",
+      "type": "database",
+      "label": "DynamoDB",
+      "sublabel": "lapse-cases, lapse-permits",
+      "tag": "case id is a hash, so a rerun is one case",
+      "pos": [
+        670,
+        700
+      ],
+      "size": [
+        250,
+        66
+      ],
+      "sources": [
+        {
+          "path": "agent/store.py",
+          "line": 69,
+          "label": "CaseStore"
+        },
+        {
+          "path": "agent/store.py",
+          "line": 160,
+          "label": "ItemStore"
+        }
+      ]
+    },
+    {
+      "id": "console",
+      "type": "frontend",
+      "label": "Console on Vercel",
+      "sublabel": "a decision queue, not a dashboard",
+      "pos": [
+        990,
+        700
+      ],
+      "size": [
+        240,
+        66
+      ],
+      "sources": [
+        {
+          "path": "console/lib/store.ts",
+          "line": 107,
+          "label": "listCases"
+        },
+        {
+          "path": "console/components/ApproveAction.tsx",
+          "line": 1,
+          "label": "the one button"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "AWS us-east-1 (AISPL account: Bedrock not offered)",
+      "wraps": [
+        "scheduler",
+        "lambda",
+        "s3",
+        "dynamo"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "permits-in",
+      "from": "permits",
+      "to": "portfolio",
+      "label": "keyed by permittee"
+    },
+    {
+      "id": "jobs-in",
+      "from": "jobs",
+      "to": "portfolio",
+      "label": "keyed by job number"
+    },
+    {
+      "id": "violations-in",
+      "from": "violations",
+      "to": "portfolio",
+      "label": "keyed by BIN"
+    },
+    {
+      "id": "joined",
+      "from": "portfolio",
+      "to": "engine",
+      "label": "every item, joined"
+    },
+    {
+      "id": "cited",
+      "from": "rulebook",
+      "to": "engine",
+      "label": "the window, and its citation",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "tick",
+      "from": "scheduler",
+      "to": "lambda",
+      "label": "daily at 11:00 UTC"
+    },
+    {
+      "id": "one-pass",
+      "from": "lambda",
+      "to": "portfolio",
+      "label": "one pass",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "survivors",
+      "from": "engine",
+      "to": "agent",
+      "label": "only the survivors",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "reading",
+      "from": "agent",
+      "to": "engine",
+      "label": "one disposition read",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ruling",
+      "from": "engine",
+      "to": "hook",
+      "label": "must be FILE",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "attempt",
+      "from": "agent",
+      "to": "hook",
+      "label": "file_response"
+    },
+    {
+      "id": "sent",
+      "from": "hook",
+      "to": "filing_desk",
+      "label": "the draft and its evidence",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "cases",
+      "from": "agent",
+      "to": "dynamo",
+      "label": "cases",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "pass-written",
+      "from": "lambda",
+      "to": "s3",
+      "label": "the pass, written down",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "delta",
+      "from": "lambda",
+      "to": "dynamo",
+      "label": "what moved since yesterday"
+    },
+    {
+      "id": "read",
+      "from": "dynamo",
+      "to": "console",
+      "label": "read cases"
+    },
+    {
+      "id": "approve",
+      "from": "console",
+      "to": "dynamo",
+      "label": "approval recorded",
+      "fromSide": "bottom",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ask",
+      "from": "console",
+      "to": "contractor",
+      "label": "one question per item",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "What the model decides",
+      "items": [
+        "Whether a DOB clerk's comment closed a violation, quoting the words that decided it",
+        "How to word the renewal, from the job description an architect filed",
+        "Which single question is worth interrupting a contractor for"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What it can never decide",
+      "items": [
+        "Whether a permit is inside the 30 day action window",
+        "Whether a later sequence already superseded it",
+        "Whether anything may be filed at all"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What is true when nobody is watching",
+      "items": [
+        "HOLD is most of the output, and every HOLD is an alarm correctly not sent",
+        "A case id is a hash of contractor, kind and DOB identifier, so a rerun is the same case",
+        "A deadline this program cannot cite is one it refuses to compute"
+      ]
+    }
+  ]
+}
