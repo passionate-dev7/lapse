@@ -549,6 +549,14 @@ def build_agent(
             )
         if len(draft_text.split()) > 260:
             return "Rejected: too long. Eight sentences at most."
+        # This text goes to a person and gets pasted into a DOB filing. An em
+        # dash or a double hyphen in it reads as machine output, which is the
+        # last thing a filing representative wants to hand a plan examiner.
+        if "\u2014" in draft_text or " -- " in draft_text:
+            return (
+                "Rejected: the draft contains an em dash or a double hyphen. Use a "
+                "period, a comma, a colon, or two sentences, and send it again."
+            )
         already = case.get("draft_text")
         ledger.drafts[case_id_arg] = draft_text
         case["draft_text"] = draft_text
